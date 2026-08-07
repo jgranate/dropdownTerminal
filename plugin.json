@@ -1,0 +1,35 @@
+{
+  "id": "dropdownTerminal",
+  "name": "Dropdown Terminal",
+  "description": "Sliding terminal (QMLTermWidget) that slides in from the screen edge",
+  "version": "0.2.0",
+  "author": "joe",
+  "icon": "terminal",
+  "type": "daemon",
+  "component": "./Daemon.qml",
+  "startupCheck": "./StartupCheck.qml",
+  "settings": "./MySettings.qml",
+  "permissions": [
+    "settings_read",
+    "settings_write"
+  ],
+  "capabilities": [
+    "terminal"
+  ],
+  "category": "utilities",
+  "dependencies": [
+    "qmltermwidget",
+    "quickshell"
+  ],
+  "compositors": [
+    "niri",
+    "hyprland",
+    "sway",
+    "scroll",
+    "miracle",
+    "mango"
+  ],
+  "distro": [
+    "any"
+  ]
+}
