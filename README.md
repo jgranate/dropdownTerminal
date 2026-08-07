@@ -49,7 +49,9 @@ DMS IPC plugin surface.
 - **Copy/paste**: `Ctrl+Shift+C` / `Ctrl+Shift+V`.
 - **Mouse clipboard**: selecting text copies it immediately; right-click pastes.
   Both behaviors can be disabled independently in plugin settings.
-- **Cursor**: follows the foreground color of the terminal cell underneath it;
+- **Cursor**: with the optional downstream patch, follows the DMS theme's
+  `color6` (the same color used as Ghostty's generated cursor color and by the
+  final PS1 segment); the stock widget follows the cell foreground.
   blinking can be enabled in plugin settings.
 - **Size toggle**: `Ctrl+T`, `F11`, or the header expand button toggles
   small/large while the terminal is open.
@@ -74,7 +76,7 @@ All settings live under **Settings → Plugins → Dropdown Terminal**:
 | Small width / expanded width | 300–1200 / 400–1800 px (defaults `520` / `900`) | Side-panel sizes, clamped to the active screen. |
 | Small height / expanded height | 300–900 / 400–1400 px (defaults `480` / `760`) | Top/bottom-panel sizes, clamped to the active screen. |
 | Show header | on / off (default on) | Shows the title and expand/close buttons. Keyboard shortcuts still work when hidden. |
-| Terminal opacity | 40–100 %, default `85` | Opacity of the terminal text area. See limitations below. |
+| Terminal opacity | 40–100 %, default `85` | Background-only opacity with the patched widget; whole-widget opacity with stock QMLTermWidget. |
 | Blinking cursor | on / off (default off) | Whether the terminal text cursor blinks. |
 | Copy on select | on / off (default on) | Immediately copies selected terminal text to the clipboard. |
 | Right-click paste | on / off (default on) | Pastes clipboard contents with the right mouse button. Disable this when an application needs right-button mouse reporting. |
@@ -151,11 +153,9 @@ don't get tangled.
 
 ## Known limitations
 
-1. **Text-area translucency fades text.** QMLTermWidget has no supported way to
-   make only the terminal background translucent (its `opacity` is the whole
-   painted item, and its scheme `Opacity` field is ignored by the library).
-   Translucency is achieved with the widget opacity, which also fades text; the
-   default is `85%` and values below ~60% become hard to read.
+1. **The stock QMLTermWidget still fades text.** Install the optional downstream
+   package below to expose background-only opacity. The plugin feature-detects
+   it and falls back safely to whole-widget opacity with the repository package.
 2. **Palette applies at terminal start.** QMLTermWidget caches the scheme list
    per process, so the generated `dankcolors` palette is picked up when a
    terminal is created (or on the next DMS start after a theme change), not live
@@ -167,12 +167,42 @@ don't get tangled.
 5. **Escape-to-close** only fires at an idle shell prompt; if the foreground
    process can't be detected reliably (rare TUI edge cases) Escape may not close
    until the program exits.
-6. **Cursor color is not independently configurable from QML.** QMLTermWidget
-   normally follows the foreground color of the cell underneath the cursor. At
-   an empty prompt cell that is the scheme's default foreground, not an ANSI
-   color previously used by `ls` or a colored prompt. Its fixed-cursor-color
-   setter is internal C++ API and would require a QMLTermWidget patch to expose.
+6. **Cursor theming also needs the downstream package.** With it, the plugin
+   binds the cursor to theme-reactive Dank16 `color6`; without it the cursor
+   follows the foreground color of the cell underneath it.
 7. **Scrollback size is not configurable from this plugin.** The installed
    QMLTermWidget build implements history sizing internally but does not expose
    its `historySize` property or setter to QML. Adding a working control requires
    a small QMLTermWidget API patch.
+
+## Optional patched QMLTermWidget (Arch)
+
+The small downstream patch in `patches/` exposes the renderer's existing
+background opacity and fixed cursor-color support as QML properties. It is
+pinned to the same upstream commit as Arch's `qmltermwidget 2.0.0.git1-1`.
+
+Build and install it with:
+
+```sh
+cd ~/.config/DankMaterialShell/plugins/dropdownTerminal/patches
+makepkg -si
+systemctl --user restart dms
+```
+
+This replaces the repository `qmltermwidget` package with
+`qmltermwidget-dank`. To return to stock, install `qmltermwidget` again with
+Pacman.
+
+### Keeping the patch updated
+
+- Run `pacman -Syu` normally. The custom package provides `qmltermwidget`, so
+  Pacman keeps it installed; it is intentionally pinned and does not silently
+  merge future upstream changes.
+- Occasionally compare `pacman -Si qmltermwidget` with
+  `pacman -Q qmltermwidget-dank`.
+- To adopt a newer upstream release, update the commit and `pkgver` in
+  `patches/PKGBUILD`, then run `makepkg -Csi`. If the patch no longer applies,
+  its two small `TerminalDisplay` hunks need rebasing.
+- To return to stock at any time, run `sudo pacman -S qmltermwidget` and restart
+  DMS. The plugin feature-detects the patch and safely falls back to faded text
+  and the stock cursor behavior.

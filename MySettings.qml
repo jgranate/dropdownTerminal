@@ -79,7 +79,7 @@ PluginSettings {
     SliderSetting {
         settingKey: "terminalOpacity"
         label: I18n.tr("Terminal opacity")
-        description: I18n.tr("Opacity of the terminal text area. QMLTermWidget cannot make only its background translucent, so this also fades the text; values below ~60% become hard to read.")
+        description: I18n.tr("Background opacity. With the optional patched QMLTermWidget, terminal text remains fully opaque; the stock package fades the whole terminal.")
         minimum: 40
         maximum: 100
         defaultValue: 85

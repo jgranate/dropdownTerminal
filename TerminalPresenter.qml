@@ -19,6 +19,7 @@ Item {
     property bool defaultExpanded: false
     property int terminalOpacityPercent: 85
     property bool cursorBlink: false
+    property color cursorColor: "#ffcc66"
     property bool escapeToClose: true
     property string colorSchemeName: "dankcolors"
     property string fontFamily: ""
@@ -68,6 +69,7 @@ Item {
                 session: session
                 terminalOpacity: root.terminalOpacityPercent / 100
                 cursorBlink: root.cursorBlink
+                cursorColor: root.cursorColor
                 escapeToClose: root.escapeToClose
                 colorSchemeName: root.colorSchemeName
                 fontFamily: root.fontFamily

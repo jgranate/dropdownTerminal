@@ -1,0 +1,73 @@
+diff --git a/lib/TerminalDisplay.cpp b/lib/TerminalDisplay.cpp
+index d6c1edf..2fd0c0b 100644
+--- a/lib/TerminalDisplay.cpp
++++ b/lib/TerminalDisplay.cpp
+@@ -752,6 +752,15 @@ void TerminalDisplay::setKeyboardCursorColor(bool useForegroundColor, const QCol
+     else
+         _cursorColor = color;
+ }
++void TerminalDisplay::setCursorColor(const QColor& color)
++{
++    if (_cursorColor == color)
++        return;
++
++    setKeyboardCursorColor(!color.isValid(), color);
++    updateCursor();
++    emit cursorColorChanged();
++}
+ QColor TerminalDisplay::keyboardCursorColor() const
+ {
+     return _cursorColor;
+@@ -759,7 +768,13 @@ QColor TerminalDisplay::keyboardCursorColor() const
+ 
+ void TerminalDisplay::setOpacity(qreal opacity)
+ {
+-    _opacity = qBound(static_cast<qreal>(0), opacity, static_cast<qreal>(1));
++    const qreal bounded = qBound(static_cast<qreal>(0), opacity, static_cast<qreal>(1));
++    if (qFuzzyCompare(_opacity, bounded))
++        return;
++
++    _opacity = bounded;
++    update();
++    emit backgroundOpacityChanged();
+ }
+ 
+ void TerminalDisplay::setBackgroundImage(const QString& backgroundImage)
+diff --git a/lib/TerminalDisplay.h b/lib/TerminalDisplay.h
+index 6f10aef..29c53e9 100644
+--- a/lib/TerminalDisplay.h
++++ b/lib/TerminalDisplay.h
+@@ -113,6 +113,8 @@ class KONSOLEPRIVATE_EXPORT TerminalDisplay : public QQuickPaintedItem
+    Q_PROPERTY(bool antialiasText        READ antialias       WRITE setAntialias)
+    Q_PROPERTY(QStringList availableColorSchemes READ availableColorSchemes NOTIFY availableColorSchemesChanged)
+    Q_PROPERTY(bool useFBORendering      READ useFBORendering WRITE setUseFBORendering)
++   Q_PROPERTY(qreal backgroundOpacity   READ opacity WRITE setOpacity NOTIFY backgroundOpacityChanged)
++   Q_PROPERTY(QColor cursorColor        READ keyboardCursorColor WRITE setCursorColor NOTIFY cursorColorChanged)
+ 
+ public:
+     /** Constructs a new terminal display widget with the specified parent. */
+@@ -136,6 +138,7 @@ public:
+ 
+     /** Sets the opacity of the terminal display. */
+     void setOpacity(qreal opacity);
++    qreal opacity() const { return _opacity; }
+ 
+     /** 
+      * This enum describes the location where the scroll bar is positioned in the display widget.
+@@ -279,6 +282,7 @@ public:
+      * account if @p useForegroundColor is false.
+      */
+     void setKeyboardCursorColor(bool useForegroundColor , const QColor& color);
++    void setCursorColor(const QColor& color);
+ 
+     /**
+      * Returns the color of the keyboard cursor, or an invalid color if the keyboard
+@@ -679,6 +683,8 @@ signals:
+     void blinkingCursorStateChanged();
+     void boldIntenseChanged();
+     void italicEnabledChanged();
++    void backgroundOpacityChanged();
++    void cursorColorChanged();
+ 
+ protected:
+     bool event( QEvent * ) override;

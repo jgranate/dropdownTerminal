@@ -16,6 +16,7 @@ Item {
     required property var session
     property real terminalOpacity: 0.85
     property bool cursorBlink: false
+    property color cursorColor: "#ffcc66"
     property bool escapeToClose: true
     property string colorSchemeName: "dankcolors"
     property string fontFamily: ""
@@ -46,8 +47,6 @@ Item {
         }
         colorScheme: root.colorSchemeName
         useFBORendering: false
-        opacity: root.terminalOpacity
-
         session: root.session
 
         // Close with Escape only while the shell prompt is idle, so terminal
@@ -150,6 +149,24 @@ Item {
         console.warn("dropdownTerminal: no usable QMLTermWidget color scheme found")
     }
 
+    // These properties are supplied by the downstream qmltermwidget patch in
+    // patches/. Dynamic assignment keeps the plugin usable with the stock
+    // package: stock builds retain the old whole-widget opacity as a fallback.
+    function applyPatchedAppearance() {
+        if ("backgroundOpacity" in term) {
+            term.opacity = 1
+            term.backgroundOpacity = root.terminalOpacity
+        } else {
+            term.opacity = root.terminalOpacity
+        }
+
+        if ("cursorColor" in term)
+            term.cursorColor = root.cursorColor
+    }
+
+    onTerminalOpacityChanged: root.applyPatchedAppearance()
+    onCursorColorChanged: root.applyPatchedAppearance()
+
     function refresh() {
         if (!term || !term.session)
             return
@@ -189,6 +206,7 @@ Item {
 
     Component.onCompleted: {
         root.applyScheme()
+        root.applyPatchedAppearance()
         term.forceActiveFocus()
     }
 }

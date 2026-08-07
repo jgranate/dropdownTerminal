@@ -26,6 +26,8 @@ Item {
     property string defaultSize: "small"
     property int terminalOpacity: 85
     property bool cursorBlink: false
+    readonly property color cursorColor: (Theme.dank16 && Theme.dank16.default && Theme.dank16.default.color6)
+                                         ? Theme.dank16.default.color6 : "#ffcc66"
     property bool escapeToClose: true
     property string colorSchemeName: "dankcolors"
     property string fontFamily: ""
@@ -100,6 +102,7 @@ Item {
             defaultExpanded: root.defaultSize === "large"
             terminalOpacityPercent: root.terminalOpacity
             cursorBlink: root.cursorBlink
+            cursorColor: root.cursorColor
             escapeToClose: root.escapeToClose
             colorSchemeName: root.colorSchemeName
             fontFamily: root.fontFamily
