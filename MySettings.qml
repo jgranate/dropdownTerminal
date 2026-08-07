@@ -93,6 +93,14 @@ PluginSettings {
         defaultValue: false
     }
 
+    StringSetting {
+        settingKey: "expandShortcut"
+        label: I18n.tr("Expand/minimize shortcut")
+        description: I18n.tr("Qt-style shortcut used to toggle terminal size, for example F11 or Ctrl+Shift+Space. Ctrl+T remains available as a fallback.")
+        placeholder: "F11"
+        defaultValue: "F11"
+    }
+
     ToggleSetting {
         settingKey: "copyOnSelect"
         label: I18n.tr("Copy on select")

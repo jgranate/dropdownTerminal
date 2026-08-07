@@ -8,8 +8,14 @@ Color=#141218
 [Foreground]
 Color=#e6e0e9
 
+[BackgroundIntense]
+Color=#141218
+
+[ForegroundIntense]
+Color=#e6e0e9
+
 [Color0]
-Color=#14172a
+Color=#a5a096
 
 [Color1]
 Color=#ff6456

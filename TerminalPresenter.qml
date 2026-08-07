@@ -19,6 +19,7 @@ Item {
     property bool defaultExpanded: false
     property int terminalOpacityPercent: 85
     property bool cursorBlink: false
+    property string expandShortcut: "F11"
     property color cursorColor: "#ffcc66"
     property bool escapeToClose: true
     property string colorSchemeName: "dankcolors"
@@ -69,6 +70,7 @@ Item {
                 session: session
                 terminalOpacity: root.terminalOpacityPercent / 100
                 cursorBlink: root.cursorBlink
+                expandShortcut: root.expandShortcut
                 cursorColor: root.cursorColor
                 escapeToClose: root.escapeToClose
                 colorSchemeName: root.colorSchemeName

@@ -53,8 +53,8 @@ DMS IPC plugin surface.
   `color6` (the same color used as Ghostty's generated cursor color and by the
   final PS1 segment); the stock widget follows the cell foreground.
   blinking can be enabled in plugin settings.
-- **Size toggle**: `Ctrl+T`, `F11`, or the header expand button toggles
-  small/large while the terminal is open.
+- **Size toggle**: the configurable shortcut (default `F11`), `Ctrl+T`, or the
+  header expand button toggles small/large while the terminal is open.
 - **Escape to close**: pressing `Escape` closes the slideout, but only while the
   shell prompt is idle — programs that use Escape (vim, less, …) still receive
   it.
@@ -64,6 +64,9 @@ DMS IPC plugin surface.
   qmltermwidget-schemes/dankcolors.colorscheme`) on a best-effort basis. When it
   cannot be provisioned (dir missing/not writable), the terminal falls back to a
   scheme shipped with QMLTermWidget, so nothing is a hard dependency.
+- **Readable dark-theme output**: ANSI color 0 uses the theme's bright-black
+  (`color8`) gray, and bold default text retains the normal foreground instead
+  of falling back to black.
 
 ## Settings
 
@@ -72,12 +75,13 @@ All settings live under **Settings → Plugins → Dropdown Terminal**:
 | Setting | Values / default | Effect |
 |---|---|---|
 | Slide edge | `right` / `left` / `top` / `bottom` (default `right`) | Which screen edge the terminal slides in from. Applied live. |
-| Default size | `small` / `large` (default `small`) | Opening size for a *freshly* opened terminal. Changing it does **not** resize an already-open terminal (your per-session Ctrl+T/F11 state is preserved). |
+| Default size | `small` / `large` (default `small`) | Opening size for a *freshly* opened terminal. Changing it does **not** resize an already-open terminal (your per-session expanded state is preserved). |
 | Small width / expanded width | 300–1200 / 400–1800 px (defaults `520` / `900`) | Side-panel sizes, clamped to the active screen. |
 | Small height / expanded height | 300–900 / 400–1400 px (defaults `480` / `760`) | Top/bottom-panel sizes, clamped to the active screen. |
 | Show header | on / off (default on) | Shows the title and expand/close buttons. Keyboard shortcuts still work when hidden. |
 | Terminal opacity | 40–100 %, default `85` | Background-only opacity with the patched widget; whole-widget opacity with stock QMLTermWidget. |
 | Blinking cursor | on / off (default off) | Whether the terminal text cursor blinks. |
+| Expand/minimize shortcut | Qt key sequence (default `F11`) | Toggles terminal size; `Ctrl+T` remains as a fixed fallback. |
 | Copy on select | on / off (default on) | Immediately copies selected terminal text to the clipboard. |
 | Right-click paste | on / off (default on) | Pastes clipboard contents with the right mouse button. Disable this when an application needs right-button mouse reporting. |
 | Escape closes the terminal | on / off (default on) | Enables the idle-prompt-only Escape-to-close. |
@@ -126,7 +130,8 @@ don't get tangled.
   blur geometry, delayed unmapping and rapid toggle/reversal safely.
 - `TerminalPane.qml` — the terminal view. Shares the presenter's session,
   exposes `applyScheme()` with fallback, `refresh()` on window-visible/geometry
-  settle, and the shortcuts (Ctrl+Shift+C/V, Ctrl+T, F11, Escape).
+  settle, and the shortcuts (Ctrl+Shift+C/V, Ctrl+T, configurable size toggle,
+  Escape).
 - `StartupCheck.qml` — blocks activation when `QMLTermWidget` is unavailable.
 - `MySettings.qml` — the settings UI.
 - `schemes/dankcolors.colorscheme` — the shipped default scheme; the daemon
@@ -160,8 +165,8 @@ don't get tangled.
    per process, so the generated `dankcolors` palette is picked up when a
    terminal is created (or on the next DMS start after a theme change), not live
    on every theme change.
-3. **Ctrl+T and F11 are captured** while the terminal window is focused (they
-   expand instead of reaching the running program).
+3. **Ctrl+T and the configured size shortcut are captured** while the terminal
+   window is focused (they expand instead of reaching the running program).
 4. **Windows-behind blur** (the optional niri `layer-rule`) can lag behind the
    slide animation on some setups — the blur appears once the surface settles.
 5. **Escape-to-close** only fires at an idle shell prompt; if the foreground

@@ -16,6 +16,7 @@ Item {
     required property var session
     property real terminalOpacity: 0.85
     property bool cursorBlink: false
+    property string expandShortcut: "F11"
     property color cursorColor: "#ffcc66"
     property bool escapeToClose: true
     property string colorSchemeName: "dankcolors"
@@ -193,7 +194,7 @@ Item {
     }
 
     Shortcut {
-        sequence: "F11"
+        sequence: root.expandShortcut
         context: Qt.WindowShortcut
         onActivated: root.expandRequested()
     }

@@ -26,6 +26,7 @@ Item {
     property string defaultSize: "small"
     property int terminalOpacity: 85
     property bool cursorBlink: false
+    property string expandShortcut: "F11"
     readonly property color cursorColor: (Theme.dank16 && Theme.dank16.default && Theme.dank16.default.color6)
                                          ? Theme.dank16.default.color6 : "#ffcc66"
     property bool escapeToClose: true
@@ -55,6 +56,8 @@ Item {
         terminalOpacity = isFinite(rawOpacity) ? Math.max(40, Math.min(100, Math.round(rawOpacity))) : 85
         const rawCursorBlink = pluginService ? pluginService.loadPluginData(pluginId, "cursorBlink", false) : false
         cursorBlink = rawCursorBlink === true || rawCursorBlink === 1 || String(rawCursorBlink).toLowerCase() === "true"
+        const rawExpandShortcut = pluginService ? pluginService.loadPluginData(pluginId, "expandShortcut", "F11") : "F11"
+        expandShortcut = String(rawExpandShortcut || "F11").trim() || "F11"
         const rawEscape = pluginService ? pluginService.loadPluginData(pluginId, "escapeToClose", true) : true
         escapeToClose = rawEscape !== false
         const rawScheme = pluginService ? pluginService.loadPluginData(pluginId, "terminalColorScheme", "dankcolors") : "dankcolors"
@@ -102,6 +105,7 @@ Item {
             defaultExpanded: root.defaultSize === "large"
             terminalOpacityPercent: root.terminalOpacity
             cursorBlink: root.cursorBlink
+            expandShortcut: root.expandShortcut
             cursorColor: root.cursorColor
             escapeToClose: root.escapeToClose
             colorSchemeName: root.colorSchemeName
@@ -169,8 +173,17 @@ Item {
         let ini = "[General]\nDescription=Dank Colors (DMS theme)\nOpacity=1\n\n"
         ini += "[Background]\nColor=" + root.defaultBackground + "\n\n"
         ini += "[Foreground]\nColor=" + root.defaultForeground + "\n\n"
-        for (let i = 0; i < 8; i++)
-            ini += "[Color" + i + "]\nColor=" + (d ? (d["color" + i] || root.defaultPalette[i]) : root.defaultPalette[i]) + "\n\n"
+        // QMLTermWidget uses separate default entries for bold/intense text.
+        // Omitting ForegroundIntense makes bold default text fall back to black.
+        ini += "[BackgroundIntense]\nColor=" + root.defaultBackground + "\n\n"
+        ini += "[ForegroundIntense]\nColor=" + root.defaultForeground + "\n\n"
+        for (let i = 0; i < 8; i++) {
+            // ANSI black is commonly used for status headings (for example by
+            // yay). On dark themes color0 is effectively the background, so
+            // use the theme's bright-black/gray color8 for readable output.
+            const paletteIndex = i === 0 ? 8 : i
+            ini += "[Color" + i + "]\nColor=" + (d ? (d["color" + paletteIndex] || root.defaultPalette[paletteIndex]) : root.defaultPalette[paletteIndex]) + "\n\n"
+        }
         for (let i = 0; i < 8; i++)
             ini += "[Color" + i + "Intense]\nColor=" + (d ? (d["color" + (i + 8)] || root.defaultPalette[i + 8]) : root.defaultPalette[i + 8]) + "\n\n"
         return ini
