@@ -20,8 +20,11 @@ DMS IPC plugin surface.
 
 **Optional**
 
-- A keybind to toggle the terminal, e.g. in niri's `dms/binds.kdl`:
-  `Mod+T { spawn "dms" "ipc" "call" "plugins" "toggle" "dropdownTerminal"; }`
+- A keybind to toggle the terminal, e.g. in the active niri `config.kdl` (or
+  `dms/binds.kdl` when that file is explicitly included by `config.kdl`):
+  `Mod+T { spawn "dms" "ipc" "call" "plugins" "toggle" "dropdownTerminal"; }`.
+  In niri, `Mod` normally means the Super/Windows key; use `Alt+T` if Alt is
+  the intended modifier.
   (only the keybind above is used; there is no in-plugin keybinding for
   toggling).
 - To blur the windows *behind* the terminal (not just the wallpaper), add a niri
@@ -143,8 +146,50 @@ don't get tangled.
    `~/.config/DankMaterialShell/plugins/dropdownTerminal/`.
 2. Install `qmltermwidget` (Arch: `paru -S qmltermwidget`).
 3. Enable **Dropdown Terminal** in DMS Settings → Plugins.
-4. Optionally add a toggle keybind and/or the niri blur `layer-rule` (see
-   Requirements).
+4. Add a toggle keybind to the `binds` block in the niri configuration that is
+   actually loaded. For example:
+
+   ```kdl
+   Alt+T hotkey-overlay-title="Dropdown Terminal" {
+       spawn "dms" "ipc" "call" "plugins" "toggle" "dropdownTerminal";
+   }
+   ```
+
+   A standalone `dms/binds.kdl` has no effect unless the main `config.kdl`
+   includes it.
+5. Restart DMS, wait a couple of seconds for plugin discovery, and test the
+   toggle:
+
+   ```sh
+   systemctl --user restart dms
+   dms ipc call plugins toggle dropdownTerminal
+   ```
+
+### Blur on niri
+
+The terminal can be translucent without compositor blur. For background blur,
+enable **Settings → Appearance → Background Blur** in DMS (`"blurEnabled":
+true` in `~/.config/DankMaterialShell/settings.json`) and add this to the active
+niri configuration:
+
+```kdl
+layer-rule {
+    match namespace="^dms:slideout$"
+    background-effect {
+        blur true
+        xray false
+    }
+}
+```
+
+`xray false` blurs the real windows behind the terminal. Xray mode generally
+uses the wallpaper as the blur backdrop instead. Validate and reload niri after
+editing:
+
+```sh
+niri validate -c ~/.config/niri/config.kdl
+niri msg action load-config-file
+```
 
 ## Development loop
 
@@ -190,9 +235,31 @@ Build and install it with:
 
 ```sh
 cd ~/.config/DankMaterialShell/plugins/dropdownTerminal/patches
-makepkg -si
+makepkg --cleanbuild --clean --force
+pkexec pacman -U --noconfirm --ask=4 qmltermwidget-dank-[0-9]*-x86_64.pkg.tar.zst
+pkexec ln -s ~/.local/share/qmltermwidget-schemes \
+  /usr/lib/qt6/qml/QMLTermWidget/color-schemes
 systemctl --user restart dms
 ```
+
+`--ask=4` lets non-interactive Pacman confirm replacement of the conflicting
+stock `qmltermwidget` package. The color-scheme link is required because the
+patched package deliberately leaves schemes in the user-managed data
+directory; without it QMLTermWidget may not find `dankcolors` and can render
+with a white fallback background. If the link already exists, leave it in
+place.
+
+Some systems hit an upstream parallel-copy race while packaging keyboard
+layouts. If `make install` reports a missing `.keytab`, rebuild single-threaded:
+
+```sh
+MAKEFLAGS=-j1 makepkg --cleanbuild --clean --force
+```
+
+The stock package is sufficient for a functional terminal. The patched package
+adds background-only opacity and a theme-controlled cursor color. Cursor
+blinking does not require the patch; it is a separate plugin setting and is off
+by default.
 
 This replaces the repository `qmltermwidget` package with
 `qmltermwidget-dank`. To return to stock, install `qmltermwidget` again with
