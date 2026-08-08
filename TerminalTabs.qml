@@ -28,6 +28,7 @@ Item {
     property var tabs: []
     property int currentIndex: -1
     property int nextTabNumber: 1
+    property bool helpVisible: false
 
     Component {
         id: sessionFactory
@@ -137,6 +138,14 @@ Item {
             pane.focusTerminal()
     }
 
+    function toggleHelp() {
+        helpVisible = !helpVisible
+        if (helpVisible)
+            Qt.callLater(helpOverlay.forceActiveFocus)
+        else
+            Qt.callLater(root.focusTerminal)
+    }
+
     function applyScheme() {
         for (let i = 0; i < tabs.length; i++)
             tabs[i].pane?.applyScheme()
@@ -162,6 +171,25 @@ Item {
     Item {
         id: paneStack
         anchors.fill: parent
+    }
+
+    TerminalHelpOverlay {
+        id: helpOverlay
+        anchors.fill: parent
+        z: 100
+        visible: root.helpVisible
+        enabled: visible
+        expandShortcut: root.expandShortcut
+        onCloseRequested: {
+            root.helpVisible = false
+            Qt.callLater(root.focusTerminal)
+        }
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+/"
+        context: Qt.WindowShortcut
+        onActivated: root.toggleHelp()
     }
 
     Shortcut {

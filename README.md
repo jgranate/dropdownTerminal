@@ -65,6 +65,9 @@ DMS IPC plugin surface.
   midpoint snapping, or use `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown`.
   Closing the final tab is intentionally disabled.
 - **Copy/paste**: `Ctrl+Shift+C` / `Ctrl+Shift+V`.
+- **Shortcut help**: `Ctrl+Shift+?` opens a built-in shortcut overlay, even
+  when the single-tab header is hidden. The displayed resize binding follows
+  the current plugin setting.
 - **Scrollback search**: the patched widget retains 10,000 lines per tab.
   `Ctrl+Shift+F` opens or closes search, `Enter` moves forward,
   `Shift+Enter` moves backward, and `Escape` closes the search bar. Matches are
@@ -89,6 +92,30 @@ DMS IPC plugin surface.
 - **Readable dark-theme output**: ANSI color 0 uses the theme's bright-black
   (`color8`) gray, and bold default text retains the normal foreground instead
   of falling back to black.
+
+## Keyboard shortcuts
+
+Press `Ctrl+Shift+?` while the terminal is open to show the same reference in a
+built-in overlay. It is available even when the tab header is hidden. Press
+`Escape`, `Ctrl+Shift+?`, the close button, or the area outside the card to
+close it.
+
+| Shortcut | Action |
+|---|---|
+| `Ctrl+Shift+T` | Create a tab |
+| `Ctrl+Shift+W` | Close the active tab (the final tab stays open) |
+| `Ctrl+Tab` | Select the next tab |
+| `Ctrl+Shift+PageUp` / `PageDown` | Reorder the active tab |
+| `Ctrl+Shift+F` | Open or close scrollback search |
+| `Ctrl+Shift+C` / `Ctrl+Shift+V` | Copy / paste |
+| Configured resize shortcut (default `F11`) or `Ctrl+T` | Toggle small/large |
+| `Escape` | Hide the terminal at an idle shell prompt |
+| `Ctrl+Shift+?` | Toggle shortcut help |
+
+The overlay reads the current resize shortcut from the plugin settings, so its
+label updates when that setting changes. The compositor-level show/hide binding
+is deliberately omitted: it belongs to niri, Hyprland, sway or another
+compositor rather than to this plugin.
 
 ## Settings
 
