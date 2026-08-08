@@ -43,6 +43,14 @@ Item {
         return compactPath(path, fallback)
     }
 
+    function commandLabel(session) {
+        if (!session || !session.hasActiveProcess)
+            return ""
+        const raw = String(session.foregroundProcessName || "")
+        const parts = raw.split("/")
+        return parts[parts.length - 1]
+    }
+
     Timer {
         interval: 250
         repeat: true
@@ -81,11 +89,14 @@ Item {
                     required property var modelData
                     readonly property bool selected: root.controller && root.controller.currentIndex === index
                     property string displayTitle: modelData.title
+                    property bool hasActivity: false
                     property real dragOffset: 0
                     property real visualOffset: tabDrag.active ? dragOffset : root.previewOffset(index, width + tabRow.spacing)
 
                     function refreshTitle() {
-                        displayTitle = root.directoryLabel(modelData.session, modelData.initialDir, modelData.title)
+                        const command = root.commandLabel(modelData.session)
+                        displayTitle = command || root.directoryLabel(modelData.session, modelData.initialDir, modelData.title)
+                        hasActivity = !selected && Boolean(modelData.pane?.unreadActivity)
                     }
 
                     width: root.controller ? Math.max(72, (tabRow.width - tabRow.spacing * Math.max(0, root.controller.tabs.length - 1)) / root.controller.tabs.length) : 112
@@ -110,7 +121,7 @@ Item {
                     StyledText {
                         id: label
                         anchors.left: parent.left
-                        anchors.leftMargin: 12
+                        anchors.leftMargin: activityDot.visible ? 23 : 12
                         anchors.right: closeButton.left
                         anchors.rightMargin: 4
                         anchors.verticalCenter: parent.verticalCenter
@@ -118,6 +129,18 @@ Item {
                         color: Theme.surfaceText
                         font.pixelSize: Theme.fontSizeMedium
                         elide: Text.ElideMiddle
+                    }
+
+                    Rectangle {
+                        id: activityDot
+                        visible: tab.hasActivity
+                        anchors.left: parent.left
+                        anchors.leftMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 7
+                        height: 7
+                        radius: 4
+                        color: Theme.primary
                     }
 
                     Rectangle {

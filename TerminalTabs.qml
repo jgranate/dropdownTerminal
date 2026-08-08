@@ -72,6 +72,8 @@ Item {
         if (!session)
             return
         session.initialWorkingDirectory = initialDir
+        if ("historySize" in session)
+            session.historySize = 10000
         const pane = paneFactory.createObject(paneStack, { session: session })
         if (!pane) {
             session.destroy()
@@ -160,6 +162,16 @@ Item {
     Item {
         id: paneStack
         anchors.fill: parent
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+F"
+        context: Qt.WindowShortcut
+        onActivated: {
+            const pane = root.currentIndex >= 0 && root.currentIndex < root.tabs.length
+                         ? root.tabs[root.currentIndex].pane : null
+            pane?.toggleSearch()
+        }
     }
 
     Shortcut {

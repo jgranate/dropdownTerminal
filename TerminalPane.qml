@@ -1,6 +1,7 @@
 import QtQuick
 import QMLTermWidget 2.0
 import qs.Common
+import qs.Widgets
 
 // The terminal presentation. Takes a shared QMLTermSession (owned by the
 // per-screen presenter) and renders it with QMLTermWidget. Also owns the
@@ -12,6 +13,7 @@ Item {
     signal terminalReady(int pid)
     signal expandRequested()
     signal closeRequested()
+    signal outputReceived()
 
     required property var session
     property real terminalOpacity: 0.85
@@ -24,6 +26,16 @@ Item {
     property int fontSize: 12
     property bool copyOnSelect: true
     property bool rightClickPaste: true
+    property bool unreadActivity: false
+    property bool searchVisible: false
+    property int searchLine: 0
+    property int searchColumn: 0
+    property bool searchBackwards: false
+    property bool hasSearchMatch: false
+    property int matchStartLine: 0
+    property int matchStartColumn: 0
+    property int matchEndLine: 0
+    property int matchEndColumn: 0
 
     property alias termDisplay: term
 
@@ -53,6 +65,13 @@ Item {
         // Close with Escape only while the shell prompt is idle, so terminal
         // programs that use Escape (vim, less, ...) keep receiving it.
         Keys.onPressed: (event) => {
+            if (event.key === Qt.Key_F
+                    && (event.modifiers & Qt.ControlModifier)
+                    && (event.modifiers & Qt.ShiftModifier)) {
+                event.accepted = true
+                root.toggleSearch()
+                return
+            }
             if (event.key === Qt.Key_Escape && root.escapeToClose && root.session && !root.session.hasActiveProcess) {
                 event.accepted = true
                 root.closeRequested()
@@ -88,6 +107,88 @@ Item {
         function onStarted() {
             root.terminalReady(root.session.getShellPID())
         }
+        function onReceivedData(text) {
+            if (!root.visible)
+                root.unreadActivity = true
+            root.outputReceived()
+        }
+        function onMatchFound(startColumn, startLine, endColumn, endLine) {
+            term.revealSearchMatch(startColumn, startLine, endColumn, endLine)
+            root.hasSearchMatch = true
+            root.matchStartLine = startLine
+            root.matchStartColumn = startColumn
+            root.matchEndLine = endLine
+            root.matchEndColumn = endColumn
+            searchStatus.text = ""
+        }
+        function onNoMatchFound() {
+            searchStatus.text = I18n.tr("No match")
+        }
+    }
+
+    Rectangle {
+        id: searchBar
+        visible: root.searchVisible
+        z: 20
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.topMargin: 8
+        anchors.rightMargin: 10
+        width: Math.min(430, parent.width - 20)
+        height: 38
+        radius: Theme.cornerRadius
+        color: Theme.surfaceContainerHighest
+
+        TextInput {
+            id: searchInput
+            anchors.left: parent.left
+            anchors.right: searchStatus.left
+            anchors.leftMargin: 12
+            anchors.rightMargin: 8
+            anchors.verticalCenter: parent.verticalCenter
+            color: Theme.surfaceText
+            selectionColor: Theme.primary
+            selectedTextColor: Theme.onPrimary
+            font.family: root.effectiveFont
+            font.pixelSize: Theme.fontSizeMedium
+            clip: true
+            focus: root.searchVisible
+
+            Keys.onPressed: event => {
+                if (event.key === Qt.Key_Escape) {
+                    root.closeSearch()
+                    event.accepted = true
+                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    root.findNext(Boolean(event.modifiers & Qt.ShiftModifier))
+                    event.accepted = true
+                }
+            }
+            onTextChanged: {
+                root.searchLine = 0
+                root.searchColumn = 0
+                root.hasSearchMatch = false
+                searchStatus.text = ""
+                if (text)
+                    searchDebounce.restart()
+            }
+        }
+
+        StyledText {
+            id: searchStatus
+            anchors.right: parent.right
+            anchors.rightMargin: 10
+            anchors.verticalCenter: parent.verticalCenter
+            text: ""
+            color: Theme.error
+            font.pixelSize: Theme.fontSizeSmall
+        }
+    }
+
+    Timer {
+        id: searchDebounce
+        interval: 120
+        repeat: false
+        onTriggered: root.findNext(false)
     }
 
     // A right-button-only overlay leaves selection, wheel scrolling and normal
@@ -127,6 +228,7 @@ Item {
     onHeightChanged: refreshDebounce.restart()
     onVisibleChanged: {
         if (visible) {
+            unreadActivity = false
             refreshDebounce.restart()
             Qt.callLater(term.forceActiveFocus)
         }
@@ -134,6 +236,55 @@ Item {
 
     function focusTerminal() {
         term.forceActiveFocus()
+    }
+
+    function openSearch() {
+        searchVisible = true
+        searchLine = 0
+        searchColumn = 0
+        Qt.callLater(() => {
+            searchInput.forceActiveFocus()
+            searchInput.selectAll()
+        })
+    }
+
+    function toggleSearch() {
+        if (searchVisible)
+            closeSearch()
+        else
+            openSearch()
+    }
+
+    function closeSearch() {
+        searchVisible = false
+        searchStatus.text = ""
+        term.forceActiveFocus()
+    }
+
+    function findNext(backwards) {
+        if (!searchInput.text)
+            return
+        searchBackwards = backwards
+        if (hasSearchMatch) {
+            if (backwards) {
+                searchLine = matchStartLine
+                searchColumn = Math.max(0, matchStartColumn - 1)
+                if (matchStartColumn === 0) {
+                    searchLine = Math.max(0, matchStartLine - 1)
+                    searchColumn = 2147483647
+                }
+            } else {
+                searchLine = matchEndLine
+                searchColumn = matchEndColumn + 1
+            }
+        } else if (backwards) {
+            searchLine = 2147483647
+            searchColumn = 2147483647
+        } else {
+            searchLine = 0
+            searchColumn = 0
+        }
+        root.session.search(searchInput.text, searchLine, searchColumn, !backwards)
     }
 
     // QMLTermWidget resolves scheme files lazily, so if the scheme file is

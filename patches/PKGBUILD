@@ -1,7 +1,7 @@
 pkgname=qmltermwidget-dank
-pkgver=2.0.0.git1.dank1
+pkgver=2.0.0.git1.dank2
 pkgrel=1
-pkgdesc="QML terminal widget with separate background opacity and QML cursor color"
+pkgdesc="QML terminal widget with themed rendering, activity, and scrollback search APIs"
 arch=(x86_64)
 url="https://github.com/Swordfish90/qmltermwidget"
 license=(GPL-2.0-only)
@@ -12,23 +12,25 @@ conflicts=(qmltermwidget)
 source=(
   "git+$url.git#commit=ce8e09ad4daeb9fe59b60d6b228b0f7cf4055e16"
   qmltermwidget-background-opacity-cursor-color.patch
+  qmltermwidget-tabs-scrollback.patch
 )
-sha256sums=('SKIP' 'SKIP')
+sha256sums=('SKIP' 'SKIP' 'SKIP')
 
 prepare() {
   cd qmltermwidget
   patch -Np1 -i "$srcdir/qmltermwidget-background-opacity-cursor-color.patch"
+  patch -Np1 -i "$srcdir/qmltermwidget-tabs-scrollback.patch"
 }
 
 build() {
   cd qmltermwidget
   qmake6
-  make
+  make -j1
 }
 
 package() {
   cd qmltermwidget
-  make INSTALL_ROOT="$pkgdir" install
+  make -j1 INSTALL_ROOT="$pkgdir" install
 
   # This setup keeps schemes in ~/.local/share and links the QML import path
   # there. Do not package the upstream scheme directory so Pacman preserves

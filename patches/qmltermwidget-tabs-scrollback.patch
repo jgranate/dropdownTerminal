@@ -1,0 +1,75 @@
+diff --git a/lib/TerminalDisplay.cpp b/lib/TerminalDisplay.cpp
+index 2fd0c0b..42b604e 100644
+--- a/lib/TerminalDisplay.cpp
++++ b/lib/TerminalDisplay.cpp
+@@ -2229,6 +2229,24 @@ void TerminalDisplay::scrollToEnd()
+   _screenWindow->setTrackOutput( _screenWindow->atEndOfOutput() );
+ }
+ 
++void TerminalDisplay::revealSearchMatch(int startColumn, int startLine,
++                                        int endColumn, int endLine)
++{
++    if (!_screenWindow)
++        return;
++
++    const int topLine = qMax(0, startLine - (_screenWindow->windowLines() / 2));
++    _screenWindow->scrollTo(topLine);
++    _screenWindow->clearSelection();
++    _screenWindow->setSelectionStart(startColumn,
++                                     startLine - _screenWindow->currentLine(), false);
++    _screenWindow->setSelectionEnd(endColumn,
++                                   endLine - _screenWindow->currentLine());
++    updateLineProperties();
++    updateImage();
++    update();
++}
++
+ void TerminalDisplay::setScrollBarPosition(QTermWidget::ScrollBarPosition position)
+ {
+   if (_scrollbarLocation == position)
+diff --git a/lib/TerminalDisplay.h b/lib/TerminalDisplay.h
+index 29c53e9..1f8391b 100644
+--- a/lib/TerminalDisplay.h
++++ b/lib/TerminalDisplay.h
+@@ -178,6 +178,8 @@ public:
+      * Scroll to the bottom of the terminal (reset scrolling).
+      */
+     void scrollToEnd();
++    Q_INVOKABLE void revealSearchMatch(int startColumn, int startLine,
++                                       int endColumn, int endLine);
+ 
+     /**
+      * Returns the display's filter chain.  When the image for the display is updated,
+diff --git a/lib/ksession.cpp b/lib/ksession.cpp
+index e17ec8a..88952e3 100644
+--- a/lib/ksession.cpp
++++ b/lib/ksession.cpp
+@@ -40,6 +40,8 @@ KSession::KSession(QObject *parent) :
+     connect(m_session, SIGNAL(started()), this, SIGNAL(started()));
+     connect(m_session, SIGNAL(finished()), this, SLOT(sessionFinished()));
+     connect(m_session, SIGNAL(titleChanged()), this, SIGNAL(titleChanged()));
++    connect(m_session, &Konsole::Session::receivedData,
++            this, &KSession::receivedData);
+ }
+ 
+ KSession::~KSession()
+diff --git a/lib/ksession.h b/lib/ksession.h
+index f4e9d6e..5bdce7e 100644
+--- a/lib/ksession.h
++++ b/lib/ksession.h
+@@ -42,6 +42,7 @@ class KSession : public QObject
+     Q_PROPERTY(QString  shellProgram READ getShellProgram WRITE setShellProgram)
+     Q_PROPERTY(QStringList  shellProgramArgs READ getShellProgramArgs WRITE setArgs)
+     Q_PROPERTY(QString  history READ getHistory)
++    Q_PROPERTY(int historySize READ historySize WRITE setHistorySize NOTIFY historySizeChanged)
+     Q_PROPERTY(bool hasActiveProcess READ hasActiveProcess)
+     Q_PROPERTY(QString foregroundProcessName READ foregroundProcessName)
+     Q_PROPERTY(QString currentDir READ currentDir)
+@@ -133,6 +134,7 @@ signals:
+ 
+     void matchFound(int startColumn, int startLine, int endColumn, int endLine);
+     void noMatchFound();
++    void receivedData(const QString &text);
+ 
+ public slots:
+     /*! Set named key binding for given widget
