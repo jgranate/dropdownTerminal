@@ -1,16 +1,13 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import QMLTermWidget 2.0
 import qs.Common
 import qs.Services
 
-// One slideout window plus one persistent terminal session per screen, the
+// One slideout window plus persistent terminal tabs per screen, the
 // established DMS convention for per-screen surfaces (see the notepad).
 //
-// The QMLTermSession is owned here as a sibling of the slideout window, NOT
-// inside the terminal pane, so that changing the slide edge, sizes, opacity or
-// font never destroys the running shell. The shell is started lazily the first
-// time the terminal is opened on this screen.
+// TerminalTabs owns the sessions outside the individual terminal views, so
+// switching tabs or changing presentation settings never destroys a shell.
 Item {
     id: root
 
@@ -36,12 +33,6 @@ Item {
     readonly property var log: Log.scoped("dropdownTerminal")
     readonly property bool horizontalEdge: slideEdge === "left" || slideEdge === "right"
 
-    QMLTermSession {
-        id: session
-        initialWorkingDirectory: "$HOME"
-        kbScheme: "default"
-    }
-
     property bool _openedOnce: false
 
     // Called on every reveal. Applies the default size only the first time the
@@ -51,8 +42,10 @@ Item {
         if (!root._openedOnce) {
             root._openedOnce = true
             slideout.expanded = root.defaultExpanded
-            session.startShellProgram()
         }
+        // The slideout can reveal before its Loader finishes on DMS startup.
+        // Always retry here; TerminalTabs.ensureStarted() is idempotent.
+        slideout.loadedItem?.ensureStarted()
     }
 
     SlideoutWindow {
@@ -64,10 +57,18 @@ Item {
         expandable: true
         customTransparency: 0.7
         title: root.showHeader ? I18n.tr("Terminal") : ""
+        headerVisible: root.showHeader && loadedItem && loadedItem.tabs.length > 1
+
+        headerContent: Component {
+            TerminalTabsHeader {
+                controller: slideout.loadedItem
+            }
+        }
 
         content: Component {
-            TerminalPane {
-                session: session
+            TerminalTabs {
+                active: slideout.isVisible
+                slideEdge: root.slideEdge
                 terminalOpacity: root.terminalOpacityPercent / 100
                 cursorBlink: root.cursorBlink
                 expandShortcut: root.expandShortcut
@@ -79,7 +80,7 @@ Item {
                 copyOnSelect: root.copyOnSelect
                 rightClickPaste: root.rightClickPaste
 
-                onTerminalReady: pid => root.log.info("session started pid=" + pid)
+                onSessionStarted: pid => root.log.info("session started pid=" + pid)
                 onExpandRequested: slideout.expanded = !slideout.expanded
                 onCloseRequested: slideout.hide()
             }
@@ -92,6 +93,11 @@ Item {
                 if (slideout.isVisible)
                     slideout.loadedItem?.focusTerminal()
             })
+        }
+
+        onContentLoaded: {
+            if (root._openedOnce || slideout.isVisible)
+                root.ensureOpened()
         }
     }
 

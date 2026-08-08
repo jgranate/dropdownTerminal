@@ -39,16 +39,22 @@ DMS IPC plugin surface.
   rendered by `QMLTermWidget` (not a wrapper around another terminal app).
 - **Slides from any edge** (right/left/top/bottom). Changing the edge in
   settings updates the live window; it never restarts your shell.
-- **Multi-monitor**: one slideout window **and one persistent terminal session
-  per screen** (the DMS convention, same as the notepad). `toggle()` opens the
-  terminal on the currently focused screen. A screen being plugged in or
-  removed creates/destroys that screen's terminal cleanly.
-- **Session persistence**: the shell/session is owned by the per-screen
-  presenter, *not* by the slideout or the terminal view. Changing the slide
-  edge, sizes, opacity, font or color scheme does not destroy the session or
-  kill running jobs. Shells start lazily the first time each screen's terminal
-  is opened (no duplicate shells at startup). Unloading the plugin closes all
-  sessions.
+- **Multi-monitor**: one slideout window with an independent set of persistent
+  terminal tabs per screen. `toggle()` opens the terminal on the currently
+  focused screen. Removing a screen cleanly destroys only that screen's tabs.
+- **Persistent tabs**: every tab owns a real `QMLTermSession`, PTY and terminal
+  view. Hiding the slideout, switching tabs, changing the edge or resizing does
+  not recreate shells or kill running jobs. Sessions persist for the lifetime
+  of DMS; restarting DMS, unloading the plugin or removing their screen closes
+  them.
+- **Ghostty-style tab header**: a single tab uses the full terminal with no
+  header. Creating a second tab reveals a flexible header with compact full
+  working-directory labels such as `~/.config/DankMaterialShell/plugins`.
+  New tabs inherit the active tab's directory.
+- **Tab controls**: `Ctrl+Shift+T` creates a tab, `Ctrl+Shift+W` closes the
+  active tab, and `Ctrl+Tab` cycles. Drag tabs to reorder them with live
+  midpoint snapping, or use `Ctrl+Shift+PageUp` / `Ctrl+Shift+PageDown`.
+  Closing the final tab is intentionally disabled.
 - **Copy/paste**: `Ctrl+Shift+C` / `Ctrl+Shift+V`.
 - **Mouse clipboard**: selecting text copies it immediately; right-click pastes.
   Both behaviors can be disabled independently in plugin settings.
@@ -81,7 +87,7 @@ All settings live under **Settings → Plugins → Dropdown Terminal**:
 | Default size | `small` / `large` (default `small`) | Opening size for a *freshly* opened terminal. Changing it does **not** resize an already-open terminal (your per-session expanded state is preserved). |
 | Small width / expanded width | 300–1200 / 400–1800 px (defaults `520` / `900`) | Side-panel sizes, clamped to the active screen. |
 | Small height / expanded height | 300–900 / 400–1400 px (defaults `480` / `760`) | Top/bottom-panel sizes, clamped to the active screen. |
-| Show header | on / off (default on) | Shows the title and expand/close buttons. Keyboard shortcuts still work when hidden. |
+| Show header | on / off (default on) | Shows directory tabs and expand/close buttons when multiple tabs exist. A single tab has no header. Keyboard shortcuts still work when hidden. |
 | Terminal opacity | 40–100 %, default `85` | Background-only opacity with the patched widget; whole-widget opacity with stock QMLTermWidget. |
 | Blinking cursor | on / off (default off) | Whether the terminal text cursor blinks. |
 | Expand/minimize shortcut | Qt key sequence (default `F11`) | Toggles terminal size; `Ctrl+T` remains as a fixed fallback. |
@@ -98,18 +104,20 @@ All settings live under **Settings → Plugins → Dropdown Terminal**:
 plugin.json          manifest (daemon + settings + startupCheck)
 Daemon.qml           daemon root: validates settings, one TerminalPresenter per
                      screen, focused-screen toggle(), best-effort scheme write
- ├─ TerminalPresenter.qml   per screen; owns the persistent QMLTermSession
+ ├─ TerminalPresenter.qml   per-screen slideout and tab controller wiring
  │    ├─ SlideoutWindow.qml unified 4-edge slideout (mask, blur, animations)
- │    │    └─ TerminalPane.qml  QMLTermWidget view + shortcuts + refresh
+ │    ├─ TerminalTabsHeader.qml directory tabs, drag/snap reorder, add/close
+ │    └─ TerminalTabs.qml   owns one QMLTermSession + TerminalPane per tab
+ │         └─ TerminalPane.qml QMLTermWidget view, clipboard, shortcuts, refresh
  └─ StartupCheck.qml  fails gracefully if QMLTermWidget is absent
 MySettings.qml       PluginSettings UI
 schemes/             shipped default dankcolors.colorscheme (reference)
 ```
 
-Responsibilities are separated so the terminal/session ownership
-(`TerminalPresenter` + `QMLTermSession`), the presentation (`SlideoutWindow`),
-the settings (daemon + `MySettings`) and daemon control (`Daemon.toggle`)
-don't get tangled.
+Responsibilities are separated so tab/session ownership (`TerminalTabs`), tab
+chrome (`TerminalTabsHeader`), presentation (`SlideoutWindow`), settings
+(`Daemon` + `MySettings`) and daemon control (`Daemon.toggle`) don't get
+tangled.
 
 - `dms ipc call plugins toggle dropdownTerminal` calls `PluginService.togglePlugin`
   → `Daemon.toggle()` → the focused screen's presenter toggles.
@@ -125,16 +133,20 @@ don't get tangled.
 - `Daemon.qml` — daemon root. Reads/validates settings, hosts the per-screen
   `Variants`, implements `toggle()`, and writes the generated `dankcolors`
   scheme via a `FileView` (no root, no hard-coded paths).
-- `TerminalPresenter.qml` — per screen. Owns the persistent `QMLTermSession`
-  (sibling of the slideout), starts the shell lazily on first open, restores
-  focus on every open, and only applies `defaultSize` on the first open.
+- `TerminalPresenter.qml` — per screen. Wires the slideout, tab controller and
+  tab header together, restores focus, and applies `defaultSize` on first open.
 - `SlideoutWindow.qml` — unified 4-edge slideout (replaces the old
   `VerticalSlideout`/`DankSlideout` duplication). Handles the slide mask,
-  blur geometry, delayed unmapping and rapid toggle/reversal safely.
-- `TerminalPane.qml` — the terminal view. Shares the presenter's session,
-  exposes `applyScheme()` with fallback, `refresh()` on window-visible/geometry
-  settle, and the shortcuts (Ctrl+Shift+C/V, Ctrl+T, configurable size toggle,
-  Escape).
+  conditional/custom header, blur geometry, delayed unmapping and rapid
+  toggle/reversal safely.
+- `TerminalTabs.qml` — creates and owns up to nine persistent tab sessions and
+  panes; handles creation, closing, selection, directory inheritance and
+  keyboard reordering without rebuilding live terminal views.
+- `TerminalTabsHeader.qml` — flexible full-path tab labels, add/close controls,
+  and animated drag reordering with midpoint snapping.
+- `TerminalPane.qml` — one QMLTermWidget view. Implements native-signal
+  copy-on-select, right-click paste, scheme fallback, deterministic refresh,
+  Ctrl+Shift+C/V, Ctrl+T, the configurable size toggle and Escape handling.
 - `StartupCheck.qml` — blocks activation when `QMLTermWidget` is unavailable.
 - `MySettings.qml` — the settings UI.
 - `schemes/dankcolors.colorscheme` — the shipped default scheme; the daemon
@@ -224,6 +236,9 @@ niri msg action load-config-file
    QMLTermWidget build implements history sizing internally but does not expose
    its `historySize` property or setter to QML. Adding a working control requires
    a small QMLTermWidget API patch.
+8. **Tabs are process-lifetime persistent, not tmux sessions.** They survive
+   hiding and tab switches but not a DMS restart, logout or crash. A maximum of
+   nine tabs is currently enforced per screen.
 
 ## Optional patched QMLTermWidget (Arch)
 

@@ -32,12 +32,15 @@ PanelWindow {
     property bool expandable: false
     property bool expanded: false
     property Component content: null
+    property Component headerContent: null
     property string title: ""
+    property bool headerVisible: title !== ""
     property alias container: contentContainer
     property alias loadedItem: contentLoader.item
     property real customTransparency: -1
     signal aboutToHide
     signal revealed
+    signal contentLoaded
 
     // --- edge helpers ---
     readonly property bool horizontalEdge: slideEdge === "left" || slideEdge === "right"
@@ -208,13 +211,14 @@ PanelWindow {
                 anchors.right: parent.right
                 anchors.margins: Theme.spacingL
                 spacing: Theme.spacingM
-                visible: root.title !== ""
+                visible: root.headerVisible
 
                 Row {
                     width: parent.width
                     height: 32
 
                     Column {
+                        visible: root.headerContent === null
                         width: parent.width - buttonRow.width
                         spacing: Theme.spacingXS
                         anchors.verticalCenter: parent.verticalCenter
@@ -225,6 +229,14 @@ PanelWindow {
                             color: Theme.surfaceText
                             font.weight: Font.Medium
                         }
+                    }
+
+                    Loader {
+                        id: headerContentLoader
+                        visible: root.headerContent !== null
+                        width: parent.width - buttonRow.width
+                        height: parent.height
+                        sourceComponent: root.headerContent
                     }
 
                     Row {
@@ -253,11 +265,11 @@ PanelWindow {
 
             Item {
                 id: contentContainer
-                anchors.top: root.title !== "" ? headerColumn.bottom : parent.top
+                anchors.top: root.headerVisible ? headerColumn.bottom : parent.top
                 anchors.left: parent.left
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                anchors.topMargin: root.title !== "" ? 0 : Theme.spacingL
+                anchors.topMargin: root.headerVisible ? 0 : Theme.spacingL
                 anchors.leftMargin: Theme.spacingL
                 anchors.rightMargin: Theme.spacingL
                 anchors.bottomMargin: Theme.spacingL
@@ -266,6 +278,7 @@ PanelWindow {
                     id: contentLoader
                     anchors.fill: parent
                     sourceComponent: root.content
+                    onLoaded: root.contentLoaded()
                 }
             }
         }

@@ -60,16 +60,15 @@ Item {
         }
     }
 
-    // This QMLTermWidget build does not reliably emit copyAvailable when its
-    // ScreenWindow selection changes. PointHandler observes the left pointer
-    // passively, without stealing the drag from the terminal; copy after release
-    // so copyClipboard() sees the finalized selection.
-    PointHandler {
-        id: selectionReleaseObserver
-        enabled: root.copyOnSelect
-        acceptedButtons: Qt.LeftButton
-        onActiveChanged: {
-            if (!active)
+    // QMLTermWidget emits isBusySelecting from its native mouse handlers. Use
+    // that instead of a sibling PointerHandler: the painted terminal consumes
+    // the pointer interaction, so passive QML handlers do not reliably observe
+    // the release. Copy one event-loop turn after the native selection ends so
+    // copyClipboard() sees the finalized ScreenWindow selection.
+    Connections {
+        target: term
+        function onIsBusySelecting(busy) {
+            if (!busy && root.copyOnSelect)
                 copySelectionDebounce.restart()
         }
     }
@@ -126,6 +125,12 @@ Item {
     }
     onWidthChanged: refreshDebounce.restart()
     onHeightChanged: refreshDebounce.restart()
+    onVisibleChanged: {
+        if (visible) {
+            refreshDebounce.restart()
+            Qt.callLater(term.forceActiveFocus)
+        }
+    }
 
     function focusTerminal() {
         term.forceActiveFocus()
