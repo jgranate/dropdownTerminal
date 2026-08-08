@@ -20,6 +20,11 @@ DMS IPC plugin surface.
 
 **Optional**
 
+- The downstream `qmltermwidget-dank` package built from `patches/`. The plugin
+  loads and provides basic tabs with the stock package; the two bundled patches
+  add background-only opacity, cursor theming, accurate inactive-tab activity,
+  10,000-line history and scrollback search. See
+  [Optional patched QMLTermWidget (Arch)](#optional-patched-qmltermwidget-arch).
 - A keybind to toggle the terminal, e.g. in the active niri `config.kdl` (or
   `dms/binds.kdl` when that file is explicitly included by `config.kdl`):
   `Mod+T { spawn "dms" "ipc" "call" "plugins" "toggle" "dropdownTerminal"; }`.
@@ -69,7 +74,7 @@ DMS IPC plugin surface.
 - **Cursor**: with the optional downstream patch, follows the DMS theme's
   `color6` (the same color used as Ghostty's generated cursor color and by the
   final PS1 segment); the stock widget follows the cell foreground.
-  blinking can be enabled in plugin settings.
+  Blinking can be enabled in plugin settings.
 - **Size toggle**: the configurable shortcut (default `F11`), `Ctrl+T`, or the
   header expand button toggles small/large while the terminal is open.
 - **Escape to close**: pressing `Escape` closes the slideout, but only while the
@@ -187,7 +192,36 @@ tangled.
    dms ipc call plugins toggle dropdownTerminal
    ```
 
-### Blur on niri
+Basic tabs, including `Ctrl+Shift+T`, do not require the downstream patches.
+Install the patched package only for the enhanced features listed below.
+
+| Capability | Stock `qmltermwidget` | `qmltermwidget-dank` |
+|---|---:|---:|
+| Terminal and persistent tabs | Yes | Yes |
+| Background-only opacity and themed cursor | No | Yes |
+| Accurate inactive-tab activity indicator | No | Yes |
+| 10,000-line history and `Ctrl+Shift+F` search | No | Yes |
+
+## Updating
+
+Pulling the plugin updates its QML files, but it does not update an installed
+`qmltermwidget-dank` system package:
+
+```sh
+cd ~/.config/DankMaterialShell/plugins/dropdownTerminal
+git pull --ff-only
+```
+
+If the pull changes `patches/PKGBUILD` or either file under `patches/*.patch`,
+rebuild and install the package by following
+[Optional patched QMLTermWidget (Arch)](#optional-patched-qmltermwidget-arch).
+Otherwise, restart DMS after the pull:
+
+```sh
+systemctl --user restart dms
+```
+
+## Blur on niri
 
 The terminal can be translucent without compositor blur. For background blur,
 enable **Settings → Appearance → Background Blur** in DMS (`"blurEnabled":
@@ -223,6 +257,33 @@ niri msg action load-config-file
   Raw `console.log` from plugin QML is not captured; `Log.scoped("dropdownTerminal")`
   is.
 
+## Troubleshooting
+
+### A new tab starts, but no tab bar appears
+
+Open **DMS Settings → Plugins → Dropdown Terminal** and enable **Show header**.
+The setting can remain disabled across plugin updates because it is stored in
+`~/.config/DankMaterialShell/plugin_settings.json`, outside this repository.
+
+Even with **Show header** enabled, the header is intentionally absent while
+there is only one tab. Press `Ctrl+Shift+T` to create a second tab; the header
+then appears. A brief resize or repaint with no header usually means the new
+session was created while **Show header** was disabled.
+
+### The compositor toggle differs from the README
+
+The show/hide key is owned by the compositor, not this plugin. Check the active
+niri configuration (including any files it includes) for the command
+`dms ipc call plugins toggle dropdownTerminal`. Changing the plugin's
+expand/minimize shortcut does not change that niri binding.
+
+### Patched features are missing after an update
+
+Check the installed package with `pacman -Q qmltermwidget-dank`. If its release
+is older than the package version in `patches/PKGBUILD`, rebuild and install it,
+then restart DMS. Basic tab creation does not depend on this package; enhanced
+activity reporting and scrollback search do.
+
 ## Known limitations
 
 1. **The stock QMLTermWidget still fades text.** Install the optional downstream
@@ -251,10 +312,15 @@ niri msg action load-config-file
 
 ## Optional patched QMLTermWidget (Arch)
 
-The small downstream patches in `patches/` expose the renderer's existing
-background opacity and fixed cursor-color support as QML properties. They also
-expose configurable history size, native received-output notifications and a
-method that scrolls to and selects a search match. The package is pinned to the
+The package applies both downstream patches in `patches/`:
+
+- `qmltermwidget-background-opacity-cursor-color.patch` exposes the renderer's
+  background opacity and fixed cursor color as QML properties.
+- `qmltermwidget-tabs-scrollback.patch` exposes configurable history size,
+  native received-output notifications and a method that reveals and selects a
+  search match.
+
+Neither patch is required for basic tab creation. The package is pinned to the
 same upstream commit as Arch's `qmltermwidget 2.0.0.git1-1`.
 
 Build and install it with:
@@ -264,8 +330,9 @@ cd ~/.config/DankMaterialShell/plugins/dropdownTerminal/patches
 makepkg --cleanbuild --clean --force
 pkexec pacman -U --noconfirm --ask=4 \
   qmltermwidget-dank-2.0.0.git1.dank2-1-x86_64.pkg.tar.zst
-pkexec ln -s ~/.local/share/qmltermwidget-schemes \
-  /usr/lib/qt6/qml/QMLTermWidget/color-schemes
+test -L /usr/lib/qt6/qml/QMLTermWidget/color-schemes || \
+  pkexec ln -s ~/.local/share/qmltermwidget-schemes \
+    /usr/lib/qt6/qml/QMLTermWidget/color-schemes
 systemctl --user restart dms
 ```
 
