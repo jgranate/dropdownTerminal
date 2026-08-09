@@ -1,0 +1,10 @@
+# Images are rendered by FilesTerminal's native QML pane. Prevent Yazi from
+# invoking its terminal-image fallback (Chafa) or doing redundant image
+# preloading, while preserving every default non-image previewer.
+[plugin]
+prepend_previewers = [
+	{ mime = "image/*", run = "noop" },
+]
+prepend_preloaders = [
+	{ mime = "image/*", run = "noop" },
+]

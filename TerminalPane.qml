@@ -14,6 +14,8 @@ Item {
     signal expandRequested()
     signal closeRequested()
     signal outputReceived()
+    signal terminalDialogOpened()
+    signal terminalDialogDismissed()
 
     required property var session
     property real terminalOpacity: 0.85
@@ -21,6 +23,8 @@ Item {
     property string expandShortcut: "F11"
     property color cursorColor: "#ffcc66"
     property bool escapeToClose: true
+    property bool forceCloseOnEscape: false
+    property bool trackYaziDeleteDialog: false
     property string colorSchemeName: "dankcolors"
     property string fontFamily: ""
     property int fontSize: 12
@@ -62,9 +66,27 @@ Item {
         useFBORendering: false
         session: root.session
 
+        Keys.onShortcutOverride: event => {
+            if ((event.key === Qt.Key_Escape && root.forceCloseOnEscape)
+                    || (root.trackYaziDeleteDialog
+                        && (event.key === Qt.Key_D || event.key === Qt.Key_Y
+                            || event.key === Qt.Key_N || event.key === Qt.Key_Escape
+                            || event.key === Qt.Key_Return || event.key === Qt.Key_Enter)))
+                event.accepted = true
+        }
+
         // Close with Escape only while the shell prompt is idle, so terminal
         // programs that use Escape (vim, less, ...) keep receiving it.
         Keys.onPressed: (event) => {
+            if (root.trackYaziDeleteDialog) {
+                if (event.key === Qt.Key_D)
+                    root.terminalDialogOpened()
+                else if (event.key === Qt.Key_Y || event.key === Qt.Key_N
+                         || event.key === Qt.Key_Escape
+                         || event.key === Qt.Key_Return || event.key === Qt.Key_Enter)
+                    root.terminalDialogDismissed()
+                // Do not accept these events: Yazi must still receive them.
+            }
             if (event.key === Qt.Key_F
                     && (event.modifiers & Qt.ControlModifier)
                     && (event.modifiers & Qt.ShiftModifier)) {
@@ -72,7 +94,10 @@ Item {
                 root.toggleSearch()
                 return
             }
-            if (event.key === Qt.Key_Escape && root.escapeToClose && root.session && !root.session.hasActiveProcess) {
+            if (event.key === Qt.Key_Escape
+                    && root.escapeToClose
+                    && root.session
+                    && (root.forceCloseOnEscape || !root.session.hasActiveProcess)) {
                 event.accepted = true
                 root.closeRequested()
             }
@@ -86,6 +111,13 @@ Item {
     // copyClipboard() sees the finalized ScreenWindow selection.
     Connections {
         target: term
+        // Full-screen terminal applications can consume Escape before the
+        // attached Keys handler. QMLTermWidget emits this native signal from
+        // its internal key path, so Files mode can still hide reliably.
+        function onTermKeyPressed(event) {
+            if (root.forceCloseOnEscape && event && event.key === Qt.Key_Escape)
+                root.closeRequested()
+        }
         function onIsBusySelecting(busy) {
             if (!busy && root.copyOnSelect)
                 copySelectionDebounce.restart()

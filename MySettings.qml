@@ -76,6 +76,14 @@ PluginSettings {
         defaultValue: true
     }
 
+    StringSetting {
+        settingKey: "yaziExecutable"
+        label: I18n.tr("Yazi executable")
+        description: I18n.tr("Executable name or absolute path used by Files mode. Arguments and shell syntax are not accepted.")
+        placeholder: "yazi"
+        defaultValue: "yazi"
+    }
+
     SliderSetting {
         settingKey: "terminalOpacity"
         label: I18n.tr("Terminal opacity")

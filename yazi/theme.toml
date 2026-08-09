@@ -1,0 +1,10 @@
+# QMLTermWidget always uses the plugin's dark terminal surface. Use the bright
+# ANSI accent for the active mode chip with an explicit dark foreground, then
+# keep the alternate segment transparent instead of placing amber on white.
+[mode]
+normal_main = { fg = "#141218", bg = "lightyellow", bold = true }
+normal_alt  = { fg = "lightyellow", bg = "reset" }
+select_main = { fg = "#141218", bg = "lightcyan", bold = true }
+select_alt  = { fg = "lightcyan", bg = "reset" }
+unset_main  = { fg = "#141218", bg = "lightmagenta", bold = true }
+unset_alt   = { fg = "lightmagenta", bg = "reset" }

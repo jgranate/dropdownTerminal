@@ -1,8 +1,8 @@
 {
   "id": "dropdownTerminal",
   "name": "Dropdown Terminal",
-  "description": "Sliding terminal (QMLTermWidget) that slides in from the screen edge",
-  "version": "0.2.0",
+  "description": "Sliding terminal and persistent Yazi files mode using QMLTermWidget",
+  "version": "0.3.0",
   "author": "joe",
   "icon": "terminal",
   "type": "daemon",

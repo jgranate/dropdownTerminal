@@ -1,8 +1,8 @@
 # Dropdown Terminal
 
-A DMS **daemon plugin** that hosts a real `QMLTermWidget` terminal in a
-layer-shell `PanelWindow` that slides in from any screen edge, toggled over the
-DMS IPC plugin surface.
+A DMS **daemon plugin** with two mutually exclusive slideouts: a tabbed
+`QMLTermWidget` terminal and a persistent, non-tabbed Yazi files mode. Both use
+the same layer-shell presentation, focused-screen selection and theme.
 
 ## Requirements
 
@@ -20,6 +20,13 @@ DMS IPC plugin surface.
 
 **Optional**
 
+- `yazi`, required only for Files mode. Install the normal Yazi package, which
+  includes the matching `yazi` and `ya` executables; Yazi also requires the
+  `file` utility for MIME detection. The Yazi executable name/path is
+  configurable, and the normal terminal remains usable when it is absent.
+- No terminal image helper is required. Files mode uses its native QML preview
+  and disables Yazi's image previewer, so Chafa, Kitty graphics, Sixel,
+  Überzug++, ImageMagick and tmux are not dependencies.
 - The downstream `qmltermwidget-dank` package built from `patches/`. The plugin
   loads and provides basic tabs with the stock package; the two bundled patches
   add background-only opacity, cursor theming, accurate inactive-tab activity,
@@ -39,6 +46,31 @@ DMS IPC plugin surface.
   still translucent over whatever is behind it, just not blurred.
 
 ## Behaviour
+
+### Files mode
+
+- `dms ipc call dropdownTerminal toggleFiles` opens or hides a dedicated Yazi
+  session on the focused screen.
+- Exactly one `QMLTermSession` is owned per enabled screen and started lazily on
+  the first successful invocation. Hiding and reopening retains Yazi's current
+  directory, selection and process state; repeated toggles do not create tabs
+  or additional sessions.
+- Files and terminal slideouts hide one another before opening, so they never
+  overlap. Files mode has a fixed `Files` header and starts expanded without
+  changing the normal terminal's remembered size.
+- Terminal tab controls and shortcuts are absent in Files mode. Shared focus,
+  opacity, theme, resize, copy/paste and scrollback search remain available.
+  Escape remains available to Yazi for leaving search/filter and other modal
+  states. The close button or `Mod+E` IPC toggle hides the slideout without
+  terminating Yazi.
+- Persistence lasts for the DMS process lifetime. A DMS restart, plugin reload,
+  logout, crash or screen removal ends the PTY. tmux is not required or used.
+- Native Kitty/Sixel image protocols are not supported by the installed
+  `qmltermwidget-dank`. Files mode instead subscribes to Yazi's hovered-file
+  event and renders common image formats in a native QML preview pane; Yazi's
+  terminal text/metadata previews remain in place for other files. Terminal
+  content still cannot provide native Wayland file drag-and-drop into other
+  applications.
 
 - **Real terminal**: a Konsole `Vt102Emulation` + PTY via `QMLTermSession`,
   rendered by `QMLTermWidget` (not a wrapper around another terminal app).
@@ -137,6 +169,7 @@ All settings live under **Settings → Plugins → Dropdown Terminal**:
 | Terminal color scheme | scheme file name (default `dankcolors`) | Any `.colorscheme` name QMLTermWidget can load. |
 | Terminal font family | text, default empty | Fixed-width font for the terminal; empty = the DMS mono font. |
 | Terminal font size | 8–24 pt (default `12`) | Terminal text size. |
+| Yazi executable | executable name or absolute path (default `yazi`) | Files-mode program; arguments and shell syntax are rejected. |
 
 ## Architecture
 
@@ -161,6 +194,9 @@ tangled.
 
 - `dms ipc call plugins toggle dropdownTerminal` calls `PluginService.togglePlugin`
   → `Daemon.toggle()` → the focused screen's presenter toggles.
+- `dms ipc call dropdownTerminal toggleFiles` uses the daemon's dedicated
+  `IpcHandler` because DMS's generic `plugins` target exposes only
+  `toggle(pluginId)`. It selects the same focused-screen presenter.
 - The daemon uses `Variants` over `SettingsData.getFilteredScreens("dropdownTerminal")`
   and `BarWidgetService.getFocusedScreenName()` for focused-screen targeting —
   the established DMS multi-screen patterns (no `Quickshell.screens[0]`).
@@ -189,6 +225,10 @@ tangled.
   copy-on-select and activity tracking, right-click paste, scrollback search,
   scheme fallback, deterministic refresh, Ctrl+Shift+C/V, Ctrl+T, the
   configurable size toggle and Escape handling.
+- `FilesPresenter.qml` — separate per-screen files slideout, expanded by
+  default and mutually exclusive with the terminal presenter.
+- `FilesTerminal.qml` — owns the single persistent Yazi session and reuses
+  `TerminalPane` without any tab controller.
 - `StartupCheck.qml` — blocks activation when `QMLTermWidget` is unavailable.
 - `MySettings.qml` — the settings UI.
 - `schemes/dankcolors.colorscheme` — the shipped default scheme; the daemon
@@ -207,6 +247,10 @@ tangled.
    Alt+T hotkey-overlay-title="Dropdown Terminal" {
        spawn "dms" "ipc" "call" "plugins" "toggle" "dropdownTerminal";
    }
+
+   Mod+E hotkey-overlay-title="Dropdown Files" {
+       spawn "dms" "ipc" "call" "dropdownTerminal" "toggleFiles";
+   }
    ```
 
    A standalone `dms/binds.kdl` has no effect unless the main `config.kdl`
@@ -217,6 +261,7 @@ tangled.
    ```sh
    systemctl --user restart dms
    dms ipc call plugins toggle dropdownTerminal
+   dms ipc call dropdownTerminal toggleFiles
    ```
 
 Basic tabs, including `Ctrl+Shift+T`, do not require the downstream patches.

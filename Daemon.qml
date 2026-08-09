@@ -40,6 +40,9 @@ Item {
     property bool showHeader: true
     property bool copyOnSelect: true
     property bool rightClickPaste: true
+    property string yaziExecutable: "yazi"
+    readonly property string yaziConfigDir: pluginService && pluginId ? pluginService.getPluginPath(pluginId) + "/yazi" : ""
+    property var _pendingFilesPresenter: null
 
     function normalizeEdge(v) {
         return ["left", "right", "top", "bottom"].indexOf(v) !== -1 ? v : "right"
@@ -80,6 +83,9 @@ Item {
         copyOnSelect = !(rawCopyOnSelect === false || rawCopyOnSelect === 0 || String(rawCopyOnSelect).toLowerCase() === "false")
         const rawRightClickPaste = pluginService ? pluginService.loadPluginData(pluginId, "rightClickPaste", true) : true
         rightClickPaste = !(rawRightClickPaste === false || rawRightClickPaste === 0 || String(rawRightClickPaste).toLowerCase() === "false")
+        const rawYazi = pluginService ? pluginService.loadPluginData(pluginId, "yaziExecutable", "yazi") : "yazi"
+        const candidateYazi = String(rawYazi || "yazi").trim()
+        yaziExecutable = /^[A-Za-z0-9_+./-]+$/.test(candidateYazi) ? candidateYazi : "yazi"
     }
 
     Component.onCompleted: root.reloadSettings()
@@ -100,24 +106,68 @@ Item {
         id: presenterVariants
         model: SettingsData.getFilteredScreens("dropdownTerminal")
 
-        delegate: TerminalPresenter {
-            slideEdge: root.slideEdge
-            defaultExpanded: root.defaultSize === "large"
-            terminalOpacityPercent: root.terminalOpacity
-            cursorBlink: root.cursorBlink
-            expandShortcut: root.expandShortcut
-            cursorColor: root.cursorColor
-            escapeToClose: root.escapeToClose
-            colorSchemeName: root.colorSchemeName
-            fontFamily: root.fontFamily
-            fontSize: root.fontSize
-            smallWidth: root.smallWidth
-            expandedWidth: root.expandedWidth
-            smallHeight: root.smallHeight
-            expandedHeight: root.expandedHeight
-            showHeader: root.showHeader
-            copyOnSelect: root.copyOnSelect
-            rightClickPaste: root.rightClickPaste
+        delegate: Item {
+            id: screenPair
+            required property var modelData
+
+            readonly property bool isVisible: terminalPresenter.isVisible || filesPresenter.isVisible
+            readonly property var pane: terminalPresenter.pane
+            readonly property var filesPane: filesPresenter.pane
+
+            function toggleTerminal() {
+                filesPresenter.hide()
+                terminalPresenter.toggle()
+            }
+
+            function showFiles() {
+                terminalPresenter.hide()
+                filesPresenter.show()
+            }
+
+            function hideFiles() { filesPresenter.hide() }
+
+            TerminalPresenter {
+                id: terminalPresenter
+                modelData: screenPair.modelData
+                slideEdge: root.slideEdge
+                defaultExpanded: root.defaultSize === "large"
+                terminalOpacityPercent: root.terminalOpacity
+                cursorBlink: root.cursorBlink
+                expandShortcut: root.expandShortcut
+                cursorColor: root.cursorColor
+                escapeToClose: root.escapeToClose
+                colorSchemeName: root.colorSchemeName
+                fontFamily: root.fontFamily
+                fontSize: root.fontSize
+                smallWidth: root.smallWidth
+                expandedWidth: root.expandedWidth
+                smallHeight: root.smallHeight
+                expandedHeight: root.expandedHeight
+                showHeader: root.showHeader
+                copyOnSelect: root.copyOnSelect
+                rightClickPaste: root.rightClickPaste
+            }
+
+            FilesPresenter {
+                id: filesPresenter
+                modelData: screenPair.modelData
+                slideEdge: root.slideEdge
+                yaziExecutable: root.yaziExecutable
+                yaziConfigDir: root.yaziConfigDir
+                terminalOpacityPercent: root.terminalOpacity
+                cursorBlink: root.cursorBlink
+                expandShortcut: root.expandShortcut
+                cursorColor: root.cursorColor
+                colorSchemeName: root.colorSchemeName
+                fontFamily: root.fontFamily
+                fontSize: root.fontSize
+                smallWidth: root.smallWidth
+                expandedWidth: root.expandedWidth
+                smallHeight: root.smallHeight
+                expandedHeight: root.expandedHeight
+                copyOnSelect: root.copyOnSelect
+                rightClickPaste: root.rightClickPaste
+            }
         }
     }
 
@@ -145,9 +195,47 @@ Item {
     function toggle() {
         const p = root.activePresenter()
         if (p)
-            p.toggle()
+            p.toggleTerminal()
         else
             root.log.warn("toggle requested but no screen is available")
+    }
+
+    function toggleFiles() {
+        const p = root.activePresenter()
+        if (!p) {
+            root.log.warn("files toggle requested but no screen is available")
+            return
+        }
+        if (p.filesPane && p.filesPane.active) {
+            p.hideFiles()
+            return
+        }
+        root._pendingFilesPresenter = p
+        yaziCheck.command = ["sh", "-c", "command -v -- \"$1\" >/dev/null 2>&1", "sh", root.yaziExecutable]
+        yaziCheck.running = true
+    }
+
+    Process {
+        id: yaziCheck
+        onExited: exitCode => {
+            const p = root._pendingFilesPresenter
+            root._pendingFilesPresenter = null
+            if (exitCode === 0) {
+                p?.showFiles()
+            } else {
+                root.log.warn("Yazi executable not found: " + root.yaziExecutable)
+                ToastService.showError(I18n.tr("Yazi is required"), I18n.tr("Could not find '%1'. Install Yazi or set its executable in Dropdown Terminal settings.").arg(root.yaziExecutable))
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "dropdownTerminal"
+
+        function toggleFiles(): string {
+            root.toggleFiles()
+            return "DROPDOWN_TERMINAL_FILES_TOGGLE_REQUESTED"
+        }
     }
 
     // --- color-scheme provisioning ---
@@ -215,6 +303,8 @@ Item {
         for (let i = 0; i < count; i++) {
             if (variants[i].pane)
                 variants[i].pane.applyScheme()
+            if (variants[i].filesPane)
+                variants[i].filesPane.applyScheme()
         }
     }
 
