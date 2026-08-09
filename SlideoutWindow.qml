@@ -84,6 +84,9 @@ PanelWindow {
 
     WlrLayershell.layer: (!suppressOverlayLayer && (triggerUsesOverlayLayer || CompositorService.framePeerSurfacesUseOverlayForScreen(modelData))) ? WlrLayershell.Overlay : WlrLayershell.Top
     WlrLayershell.exclusiveZone: 0
+    // OnDemand lets normal windows take focus later. Explicitly request window
+    // activation in show() so opening from a compositor keybind still focuses
+    // the terminal without requiring a click.
     WlrLayershell.keyboardFocus: isVisible ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
     // --- show / hide with rapid-toggle protection ---
@@ -96,6 +99,7 @@ PanelWindow {
         Qt.callLater(() => {
             if (root._showPending) {
                 root.isVisible = true
+                root.requestActivate()
                 root.revealed()
             } else {
                 // A hide() superseded this show before the deferred call ran.
@@ -200,8 +204,11 @@ PanelWindow {
                 anchors.fill: parent
                 color: contentRect.slideoutSurfaceColor
                 radius: Theme.connectedSurfaceRadius
-                border.color: Theme.isConnectedEffect ? Theme.withAlpha(BlurService.borderColor, 0) : BlurService.borderColor
-                border.width: Theme.isConnectedEffect ? 0 : BlurService.borderWidth
+                // Layer-shell QWindow.active is not reliable under Niri. The
+                // terminal view's activeFocus tracks actual keyboard focus.
+                readonly property bool terminalFocused: root.loadedItem && root.loadedItem.terminalHasFocus
+                border.color: terminalFocused ? Theme.primary : (Theme.isConnectedEffect ? Theme.withAlpha(BlurService.borderColor, 0) : BlurService.borderColor)
+                border.width: terminalFocused ? Theme.px(2, root.dpr) : (Theme.isConnectedEffect ? 0 : BlurService.borderWidth)
             }
 
             Column {

@@ -29,6 +29,9 @@ Item {
     property int currentIndex: -1
     property int nextTabNumber: 1
     property bool helpVisible: false
+    readonly property var currentPane: currentIndex >= 0 && currentIndex < tabs.length ? tabs[currentIndex].pane : null
+    readonly property bool terminalHasFocus: helpVisible ? helpOverlay.activeFocus
+                                                          : (currentPane ? currentPane.termDisplay.activeFocus : false)
 
     Component {
         id: sessionFactory
