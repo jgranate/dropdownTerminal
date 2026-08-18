@@ -97,7 +97,14 @@ Item {
         const remaining = tabs.slice()
         remaining.splice(index, 1)
         tabs = remaining
-        currentIndex = Math.min(index, remaining.length - 1)
+        // Keep the active tab active. Closing a tab before the current one
+        // shifts everything left; closing one after it leaves the index alone.
+        let newIndex = currentIndex
+        if (index < currentIndex)
+            newIndex = currentIndex - 1
+        if (newIndex >= remaining.length)
+            newIndex = remaining.length - 1
+        currentIndex = newIndex
         Qt.callLater(() => {
             closing.pane.destroy()
             closing.session.destroy()
@@ -108,6 +115,13 @@ Item {
     function nextTab() {
         if (tabs.length > 1) {
             currentIndex = (currentIndex + 1) % tabs.length
+            Qt.callLater(root.focusTerminal)
+        }
+    }
+
+    function prevTab() {
+        if (tabs.length > 1) {
+            currentIndex = (currentIndex - 1 + tabs.length) % tabs.length
             Qt.callLater(root.focusTerminal)
         }
     }
@@ -141,12 +155,18 @@ Item {
             pane.focusTerminal()
     }
 
+    function showHelp() {
+        helpVisible = true
+        Qt.callLater(helpOverlay.forceActiveFocus)
+    }
+
     function toggleHelp() {
-        helpVisible = !helpVisible
-        if (helpVisible)
-            Qt.callLater(helpOverlay.forceActiveFocus)
-        else
+        if (helpVisible) {
+            helpVisible = false
             Qt.callLater(root.focusTerminal)
+        } else {
+            showHelp()
+        }
     }
 
     function applyScheme() {
@@ -221,6 +241,18 @@ Item {
         sequence: "Ctrl+Tab"
         context: Qt.WindowShortcut
         onActivated: root.nextTab()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+L"
+        context: Qt.WindowShortcut
+        onActivated: root.nextTab()
+    }
+
+    Shortcut {
+        sequence: "Ctrl+Shift+H"
+        context: Qt.WindowShortcut
+        onActivated: root.prevTab()
     }
 
     Shortcut {

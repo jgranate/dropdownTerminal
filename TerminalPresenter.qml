@@ -34,6 +34,7 @@ Item {
     readonly property bool horizontalEdge: slideEdge === "left" || slideEdge === "right"
 
     property bool _openedOnce: false
+    property bool _helpOnReveal: false
 
     // Called on every reveal. Applies the default size only the first time the
     // terminal is opened; afterwards the user's per-session expanded state is
@@ -46,6 +47,24 @@ Item {
         // The slideout can reveal before its Loader finishes on DMS startup.
         // Always retry here; TerminalTabs.ensureStarted() is idempotent.
         slideout.loadedItem?.ensureStarted()
+    }
+
+    function showWithHelp() {
+        root._helpOnReveal = true
+        slideout.show()
+        Qt.callLater(() => root.maybeShowHelp())
+    }
+
+    // Shows the hotkey overlay once the slideout is visible AND its content is
+    // loaded. Called from both onRevealed and onContentLoaded because either
+    // can happen first.
+    function maybeShowHelp() {
+        if (!root._helpOnReveal)
+            return
+        if (!slideout.isVisible || !slideout.loadedItem)
+            return
+        root._helpOnReveal = false
+        slideout.loadedItem.showHelp()
     }
 
     SlideoutWindow {
@@ -88,6 +107,7 @@ Item {
 
         onRevealed: {
             root.ensureOpened()
+            root.maybeShowHelp()
             // Restore terminal focus whenever the slideout opens.
             Qt.callLater(() => {
                 if (slideout.isVisible)
@@ -98,6 +118,7 @@ Item {
         onContentLoaded: {
             if (root._openedOnce || slideout.isVisible)
                 root.ensureOpened()
+            root.maybeShowHelp()
         }
     }
 

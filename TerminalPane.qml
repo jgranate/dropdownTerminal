@@ -369,27 +369,38 @@ Item {
     // and F11 toggle the slideout size.
     // WindowShortcut context keeps these from firing while the terminal is
     // hidden or another window is focused.
+    //
+    // `enabled: root.visible` is important: each tab creates its own pane, and
+    // a QML Shortcut is NOT automatically disabled when its parent is hidden.
+    // With N tabs there would be N identical WindowShortcuts registered, Qt
+    // treats them as ambiguous and emits only activatedAmbiguously, and the
+    // resize/copy/paste bindings (onActivated) never fire. Restricting the
+    // shortcuts to the one visible (active) pane keeps the dispatch unambiguous.
     Shortcut {
         sequence: "Ctrl+Shift+C"
         context: Qt.WindowShortcut
+        enabled: root.visible
         onActivated: term.copyClipboard()
     }
 
     Shortcut {
         sequence: "Ctrl+Shift+V"
         context: Qt.WindowShortcut
+        enabled: root.visible
         onActivated: term.pasteClipboard()
     }
 
     Shortcut {
         sequence: root.expandShortcut
         context: Qt.WindowShortcut
+        enabled: root.visible
         onActivated: root.expandRequested()
     }
 
     Shortcut {
         sequence: "Ctrl+T"
         context: Qt.WindowShortcut
+        enabled: root.visible
         onActivated: root.expandRequested()
     }
 

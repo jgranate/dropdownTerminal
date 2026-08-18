@@ -32,6 +32,12 @@ PanelWindow {
     property bool expandable: false
     property bool expanded: false
     property Component content: null
+    // Content may expose a focus boolean under a custom name. The terminal
+    // keeps the historical default; other slideouts can opt in without
+    // pretending to be terminal widgets.
+    property string focusProperty: "terminalHasFocus"
+    property bool drawContentBorder: true
+    property bool drawContentBackground: true
     property Component headerContent: null
     property string title: ""
     property bool headerVisible: title !== ""
@@ -189,7 +195,7 @@ PanelWindow {
             layer.textureSize: Qt.size(0, 0)
             opacity: 1
 
-            readonly property color slideoutSurfaceColor: root.customTransparency >= 0 ? Theme.withAlpha(Theme.surfaceContainer, root.customTransparency) : Theme.popupLayerColor(Theme.surfaceContainer)
+            readonly property color slideoutSurfaceColor: root.drawContentBackground ? (root.customTransparency >= 0 ? Theme.withAlpha(Theme.surfaceContainer, root.customTransparency) : Theme.popupLayerColor(Theme.surfaceContainer)) : "transparent"
             // Keep the painted surface just inside the layer-shell window. A
             // surface flush with the window boundary loses its final border
             // pixel to clipping, most visibly along the bottom of a top panel.
@@ -206,9 +212,9 @@ PanelWindow {
                 radius: Theme.connectedSurfaceRadius
                 // Layer-shell QWindow.active is not reliable under Niri. The
                 // terminal view's activeFocus tracks actual keyboard focus.
-                readonly property bool terminalFocused: root.loadedItem && root.loadedItem.terminalHasFocus
-                border.color: terminalFocused ? Theme.primary : (Theme.isConnectedEffect ? Theme.withAlpha(BlurService.borderColor, 0) : BlurService.borderColor)
-                border.width: terminalFocused ? Theme.px(2, root.dpr) : (Theme.isConnectedEffect ? 0 : BlurService.borderWidth)
+                readonly property bool contentFocused: root.loadedItem && root.loadedItem[root.focusProperty] === true
+                border.color: root.drawContentBorder && contentFocused ? Theme.primary : (Theme.isConnectedEffect ? Theme.withAlpha(BlurService.borderColor, 0) : BlurService.borderColor)
+                border.width: root.drawContentBorder ? (contentFocused ? Theme.px(2, root.dpr) : (Theme.isConnectedEffect ? 0 : BlurService.borderWidth)) : 0
             }
 
             Column {

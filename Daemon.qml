@@ -119,6 +119,11 @@ Item {
                 terminalPresenter.toggle()
             }
 
+            function showTerminalWithHelp() {
+                filesPresenter.hide()
+                terminalPresenter.showWithHelp()
+            }
+
             function showFiles() {
                 terminalPresenter.hide()
                 filesPresenter.show()
@@ -215,6 +220,15 @@ Item {
         yaziCheck.running = true
     }
 
+    function showHelp() {
+        const p = root.activePresenter()
+        if (!p) {
+            root.log.warn("help requested but no screen is available")
+            return
+        }
+        p.showTerminalWithHelp()
+    }
+
     Process {
         id: yaziCheck
         onExited: exitCode => {
@@ -235,6 +249,11 @@ Item {
         function toggleFiles(): string {
             root.toggleFiles()
             return "DROPDOWN_TERMINAL_FILES_TOGGLE_REQUESTED"
+        }
+
+        function showHelp(): string {
+            root.showHelp()
+            return "DROPDOWN_TERMINAL_HELP_REQUESTED"
         }
     }
 
