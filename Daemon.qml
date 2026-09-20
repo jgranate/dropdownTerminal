@@ -116,7 +116,14 @@ Item {
 
             function toggleTerminal() {
                 filesPresenter.hide()
-                terminalPresenter.toggle()
+                if (terminalPresenter.isVisible) {
+                    if (terminalPresenter.contentFocused)
+                        terminalPresenter.hide()
+                    else
+                        terminalPresenter.focusContent()
+                } else {
+                    terminalPresenter.toggle()
+                }
             }
 
             function showTerminalWithHelp() {
@@ -127,6 +134,11 @@ Item {
             function showFiles() {
                 terminalPresenter.hide()
                 filesPresenter.show()
+            }
+
+            function hide() {
+                terminalPresenter.hide()
+                filesPresenter.hide()
             }
 
             function hideFiles() { filesPresenter.hide() }
@@ -205,6 +217,19 @@ Item {
             root.log.warn("toggle requested but no screen is available")
     }
 
+    function hide() {
+        const p = root.activePresenter()
+        if (p && p.isVisible)
+            p.hide()
+    }
+
+    function status() {
+        const p = root.activePresenter()
+        if (!p || !p.isVisible)
+            return "hidden"
+        return p.contentFocused ? "focused" : "visible-unfocused"
+    }
+
     function toggleFiles() {
         const p = root.activePresenter()
         if (!p) {
@@ -245,6 +270,15 @@ Item {
 
     IpcHandler {
         target: "dropdownTerminal"
+
+        function hide(): string {
+            root.hide()
+            return "DROPDOWN_TERMINAL_HIDDEN"
+        }
+
+        function status(): string {
+            return root.status()
+        }
 
         function toggleFiles(): string {
             root.toggleFiles()

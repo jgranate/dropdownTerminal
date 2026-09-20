@@ -215,6 +215,15 @@ Item {
         onActivated: root.toggleHelp()
     }
 
+    // When the terminal owns keyboard focus, close locally so the compositor
+    // cannot apply close-window to the tiled window underneath.
+    Shortcut {
+        sequence: "Meta+Shift+Return"
+        context: Qt.WindowShortcut
+        enabled: root.active
+        onActivated: root.closeRequested()
+    }
+
     Shortcut {
         sequence: "Ctrl+Shift+F"
         context: Qt.WindowShortcut

@@ -1,0 +1,10 @@
+#!/bin/sh
+
+case "$(dms ipc call dropdownTerminal status 2>/dev/null)" in
+    focused|visible-unfocused)
+        dms ipc call dropdownTerminal hide >/dev/null
+        ;;
+    *)
+        niri msg action close-window
+        ;;
+esac

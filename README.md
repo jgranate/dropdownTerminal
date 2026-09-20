@@ -39,6 +39,18 @@ the same layer-shell presentation, focused-screen selection and theme.
   the intended modifier.
   (only the keybind above is used; there is no in-plugin keybinding for
   toggling).
+- The slideout is a layer-shell surface, not a Niri floating window. The
+  recommended Niri integration is:
+  - `Mod+Shift+Enter` toggles the existing terminal: when it is visible but
+    focus moved to another window, it reactivates the same session; when the
+    terminal owns focus, its local shortcut hides it without closing the tiled
+    window underneath.
+  - `Mod+Shift+Q` should call `scripts/close-dropdown-or-window` before falling
+    back to Niri's `close-window`; otherwise Niri may close the tiled window
+    behind the layer.
+  Install the helper with `install -Dm755 scripts/close-dropdown-or-window
+  ~/.local/bin/close-dropdown-or-window`, then bind it as:
+  `Mod+Shift+Q repeat=false { spawn-sh "~/.local/bin/close-dropdown-or-window"; }`.
 - To blur the windows *behind* the terminal (not just the wallpaper), add a niri
   `layer-rule` for the `dms:slideout` namespace, e.g.:
   `layer-rule { match namespace="^dms:slideout$" background-effect { blur true xray false } }`.
@@ -193,7 +205,8 @@ chrome (`TerminalTabsHeader`), presentation (`SlideoutWindow`), settings
 tangled.
 
 - `dms ipc call plugins toggle dropdownTerminal` calls `PluginService.togglePlugin`
-  → `Daemon.toggle()` → the focused screen's presenter toggles.
+  → `Daemon.toggle()` → the focused screen's presenter either focuses an
+  existing unfocused slideout, hides a focused one, or opens a new session.
 - `dms ipc call dropdownTerminal toggleFiles` uses the daemon's dedicated
   `IpcHandler` because DMS's generic `plugins` target exposes only
   `toggle(pluginId)`. It selects the same focused-screen presenter.
@@ -203,6 +216,10 @@ tangled.
 - Screen geometry: small/expanded sizes are clamped against the active screen's
   available span, so both modes stay sensible on low-resolution and scaled
   displays.
+- `SlideoutWindow` exposes the content-focus state used for its active border.
+  `Daemon.toggle()` uses that state for the focus-aware `Mod+Shift+Enter`
+  behavior; `TerminalTabs` handles the focused-terminal hide case locally so
+  the compositor cannot target a tiled window underneath.
 
 ## Files
 

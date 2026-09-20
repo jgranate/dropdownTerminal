@@ -134,6 +134,11 @@ Item {
         slideout.hide()
     }
 
+    function focusContent() {
+        slideout.focusContent()
+    }
+
     readonly property bool isVisible: slideout.isVisible
+    readonly property bool contentFocused: slideout.contentFocused
     readonly property var pane: slideout.loadedItem
 }

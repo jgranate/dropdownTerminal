@@ -48,6 +48,8 @@ PanelWindow {
     signal revealed
     signal contentLoaded
 
+    readonly property bool contentFocused: root.loadedItem && root.loadedItem[root.focusProperty] === true
+
     // --- edge helpers ---
     readonly property bool horizontalEdge: slideEdge === "left" || slideEdge === "right"
     readonly property bool verticalEdge: !horizontalEdge
@@ -119,6 +121,16 @@ PanelWindow {
         root.aboutToHide()
         root._showPending = false
         root.isVisible = false
+    }
+
+    function focusContent() {
+        if (root.isVisible) {
+            // Re-run the full mapping/activation path. requestActivate() alone
+            // is not sufficient after focus moved to a regular Niri window.
+            root.hide()
+            Qt.callLater(() => root.show())
+            Qt.callLater(() => root.loadedItem?.focusTerminal())
+        }
     }
 
     function toggle() {
@@ -212,9 +224,8 @@ PanelWindow {
                 radius: Theme.connectedSurfaceRadius
                 // Layer-shell QWindow.active is not reliable under Niri. The
                 // terminal view's activeFocus tracks actual keyboard focus.
-                readonly property bool contentFocused: root.loadedItem && root.loadedItem[root.focusProperty] === true
-                border.color: root.drawContentBorder && contentFocused ? Theme.primary : (Theme.isConnectedEffect ? Theme.withAlpha(BlurService.borderColor, 0) : BlurService.borderColor)
-                border.width: root.drawContentBorder ? (contentFocused ? Theme.px(2, root.dpr) : (Theme.isConnectedEffect ? 0 : BlurService.borderWidth)) : 0
+                border.color: root.drawContentBorder && root.contentFocused ? Theme.primary : (Theme.isConnectedEffect ? Theme.withAlpha(BlurService.borderColor, 0) : BlurService.borderColor)
+                border.width: root.drawContentBorder ? (root.contentFocused ? Theme.px(2, root.dpr) : (Theme.isConnectedEffect ? 0 : BlurService.borderWidth)) : 0
             }
 
             Column {
