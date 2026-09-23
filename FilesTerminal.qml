@@ -136,6 +136,18 @@ Item {
         onTriggered: root.previewSuppressed = false
     }
 
+    // Yazi writes the hover bridge file asynchronously and may replace it
+    // instead of modifying it in place. FileView's watcher does not reliably
+    // report that atomic replacement, so periodically reload the tiny bridge
+    // file while the Files pane is active.
+    Timer {
+        id: previewPoll
+        interval: 250
+        repeat: true
+        running: root.active
+        onTriggered: hoverFile.reload()
+    }
+
     function ensureStarted() {
         if (root._started)
             return
