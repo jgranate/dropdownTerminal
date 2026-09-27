@@ -43,7 +43,7 @@ Item {
 
     property alias termDisplay: term
 
-    readonly property string effectiveFont: root.fontFamily ? root.fontFamily : Theme.defaultMonoFontFamily
+    readonly property string effectiveFont: root.fontFamily ? root.fontFamily : Theme.monoFontFamily
 
     QMLTermWidget {
         id: term
