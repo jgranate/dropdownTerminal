@@ -126,7 +126,7 @@ PluginSettings {
     ToggleSetting {
         settingKey: "escapeToClose"
         label: I18n.tr("Escape closes the terminal")
-        description: I18n.tr("Close the slideout with Escape while the shell prompt is idle. Running programs that use Escape (vim, less, ...) still receive it.")
+        description: I18n.tr("Hide the slideout with Escape when enabled. This also applies while a program is running.")
         defaultValue: true
     }
 

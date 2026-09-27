@@ -19,6 +19,7 @@ Item {
     property string expandShortcut: "F11"
     property color cursorColor: "#ffcc66"
     property bool escapeToClose: true
+    property bool forceCloseOnEscape: false
     property string colorSchemeName: "dankcolors"
     property string fontFamily: ""
     property int fontSize: 12
@@ -52,6 +53,7 @@ Item {
             expandShortcut: root.expandShortcut
             cursorColor: root.cursorColor
             escapeToClose: root.escapeToClose
+            forceCloseOnEscape: root.forceCloseOnEscape
             colorSchemeName: root.colorSchemeName
             fontFamily: root.fontFamily
             fontSize: root.fontSize

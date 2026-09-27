@@ -60,10 +60,10 @@ Item {
         cursorBlink: root.cursorBlink
         expandShortcut: root.expandShortcut
         cursorColor: root.cursorColor
-        // Yazi needs Escape to leave search, filter, selection, and other
-        // modal states. Hide Files mode with Mod+E or the header close button.
-        escapeToClose: false
-        forceCloseOnEscape: false
+        // Escape hides Files mode, just like Mod+E. Yazi remains alive and
+        // resumes at the same directory when Files mode is reopened.
+        escapeToClose: true
+        forceCloseOnEscape: true
         trackYaziDeleteDialog: true
         colorSchemeName: root.colorSchemeName
         fontFamily: root.fontFamily

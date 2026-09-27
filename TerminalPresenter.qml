@@ -93,6 +93,7 @@ Item {
                 expandShortcut: root.expandShortcut
                 cursorColor: root.cursorColor
                 escapeToClose: root.escapeToClose
+                forceCloseOnEscape: root.escapeToClose
                 colorSchemeName: root.colorSchemeName
                 fontFamily: root.fontFamily
                 fontSize: root.fontSize

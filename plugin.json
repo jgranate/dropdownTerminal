@@ -2,7 +2,7 @@
   "id": "dropdownTerminal",
   "name": "Dropdown Terminal",
   "description": "Sliding terminal and persistent Yazi files mode using QMLTermWidget",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": "joe",
   "icon": "terminal",
   "type": "daemon",
